@@ -1,0 +1,53 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Document Pipeline — Markdown + Categorization</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Document Pipeline</h1>
+    <p>1) Convert to Markdown → 2) Categorize → 3) Browse</p>
+    <div id="counts" class="counts"></div>
+  </header>
+
+  <main>
+    <section>
+      <h2>1. Converted Markdown</h2>
+      <p>All input documents have been converted to <code>.md</code> in <code>md/</code>.</p>
+      <div class="actions"><a class="btn" href="../md" target="_blank">Open md/ folder</a></div>
+    </section>
+
+    <section>
+      <h2>2. Categories</h2>
+      <div class="filters">
+        <button data-filter="all" class="active">All</button>
+        <button data-filter="Value Proposition Foundations">Value Proposition Foundations</button>
+        <button data-filter="Nokia-Specific Sources">Nokia-Specific Sources</button>
+        <button data-filter="Competitor Sources">Competitor Sources</button>
+        <button data-filter="Quantum Security Industry Context">Quantum Security Industry Context</button>
+      </div>
+      <div class="tag-filters"></div>
+      <div id="cards" class="cards"></div>
+    </section>
+
+    <section>
+      <h2>3. Details</h2>
+      <p>Click any card to open its Markdown.</p>
+    </section>
+  </main>
+
+  <footer>
+    <small>Generated locally. Edit keywords in <code>build_site.py</code> to tune categorization.</small>
+  </footer>
+
+  <script src="app.js"></script>
+  <script>
+    // Load catalog
+    fetch('catalog.json').then(r => r.json()).then(setupCards)
+  </script>
+</body>
+</html>

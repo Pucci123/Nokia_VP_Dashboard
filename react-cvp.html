@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CVP Upload Tabs (React)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  </head>
+  <body class="bg-gray-50">
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const { useState, useRef } = React;
+
+      const TABS = [
+        'Customer Value Propositions (Academic/General Sources)',
+        'Nokia',
+        'Nokia\u2019s Competitors',
+        'Quantum Security',
+      ];
+      const ACCEPT = '.pdf,.docx,.xlsx,.url';
+
+      function CVPTabbedUploader() {
+        const [active, setActive] = useState(TABS[0]);
+        const [dragging, setDragging] = useState(false);
+        const [filesByTab, setFilesByTab] = useState({});
+        const [rowsByTab, setRowsByTab] = useState({});
+        const resultsRef = useRef(null);
+
+        const files = filesByTab[active] || [];
+        const rows = rowsByTab[active] || [];
+
+        const setFilesForActive = (list) => setFilesByTab((p) => ({ ...p, [active]: list }));
+        const setRowsForActive = (list) => setRowsByTab((p) => ({ ...p, [active]: list }));
+
+        const addFiles = (list) => {
+          if (!list) return;
+          const next = Array.from(list).filter((f) =>
+            ACCEPT.split(',').some((ext) => f.name.toLowerCase().endsWith(ext))
+          );
+          if (!next.length) return;
+          setFilesForActive([...(files || []), ...next]);
+        };
+
+        const onChange = (e) => {
+          addFiles(e.target.files);
+          e.currentTarget.value = '';
+        };
+        const onDrop = (e) => { e.preventDefault(); e.stopPropagation(); setDragging(false); addFiles(e.dataTransfer.files); };
+        const onDragOver = (e) => { e.preventDefault(); e.stopPropagation(); setDragging(true); };
+        const onDragLeave = (e) => { e.preventDefault(); e.stopPropagation(); setDragging(false); };
+
+        const clearAll = () => { setFilesForActive([]); setRowsForActive([]); };
+
+        const extract = async () => {
+          if (!files.length) { setRowsForActive([]); return; }
+          const out = [];
+          for (const f of files) {
+            try {
+              const units = await fileToMarkdownUnits(f); // [{text, page?}]
+              units.forEach(({ text, page }) => {
+                splitIntoUnits(text).forEach((u) => { if (isCVP(u)) out.push({ text: u.trim(), source: f.name, page: page || '' }); });
+              });
+            } catch {}
+          }
+          setRowsForActive(dedupeByText(out));
+          // Scroll to results when ready
+          setTimeout(() => { try { resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch(e) {} }, 50);
+        };
+
+        const download = () => {
+          const header = ['Extracted Text','Source','Page'];
+          const csv = [header].concat((rows||[]).map(r=>[
+            String(r.text||'').replace(/"/g,'""'),
+            String(r.source||'').replace(/"/g,'""'),
+            String(r.page||'')
+          ].map(x=>`"${x}"`).join(','))).join('\n');
+          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url; a.download = (active||'cvp').replace(/[^\w\-]+/g,'_').toLowerCase()+"-cvps.csv"; a.click();
+          URL.revokeObjectURL(url);
+        };
+
+        return (
+          <section className="w-full max-w-6xl mx-auto px-4 py-6">
+            {/* Tabs */}
+            <nav className="w-full flex flex-wrap gap-2 md:gap-3">
+              {TABS.map((label) => {
+                const isActive = active === label;
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => setActive(label)}
+                    className={[
+                      'px-3 py-2 text-sm md:text-base rounded-md border-2 transition-colors',
+                      isActive ? 'border-blue-500 text-gray-900 font-semibold' : 'border-transparent text-gray-600 hover:border-gray-300',
+                    ].join(' ')}
+                    aria-pressed={isActive}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Title */}
+            <h2 className="mt-6 text-2xl font-semibold text-gray-900 text-center">{active}</h2>
+
+            {/* Dropzone */}
+            <label
+              htmlFor="cvp-upload-input"
+              onDrop={onDrop}
+              onDragOver={onDragOver}
+              onDragLeave={onDragLeave}
+              className={[
+                'mt-4 block w-full max-w-3xl mx-auto',
+                'h-48 p-6',
+                'border-2 border-dashed rounded-xl',
+                dragging ? 'border-blue-500' : 'border-gray-300',
+                'bg-gray-50 hover:bg-gray-100',
+                'text-center cursor-pointer select-none transition-colors',
+              ].join(' ')}
+              aria-label="Upload .pdf, .docx, .xlsx, .url files"
+            >
+              <p className="text-gray-600">Drag & drop files here or click to upload</p>
+              <p className="mt-1 text-xs text-gray-500">Accepted: {ACCEPT}</p>
+              <input id="cvp-upload-input" type="file" className="hidden" multiple accept={ACCEPT} onChange={onChange} />
+            </label>
+
+            {/* Action buttons */}
+            <div className="mt-4 w-full max-w-3xl mx-auto flex items-center justify-center gap-3">
+              <button type="button" onClick={extract} className="px-4 py-2 rounded-md border border-gray-400 hover:bg-gray-100 text-gray-800">Extract</button>
+              <button type="button" onClick={download} disabled={(rows||[]).length===0} className={["px-4 py-2 rounded-md border border-gray-400 hover:bg-gray-100 text-gray-800", (rows||[]).length===0?"opacity-50 cursor-not-allowed":""].join(' ')}>Download</button>
+              <button type="button" onClick={clearAll} className="px-4 py-2 rounded-md border border-gray-400 hover:bg-gray-100 text-gray-800">Clear</button>
+            </div>
+
+            {/* Files list */}
+            {files.length>0 && (
+              <ul className="mt-4 list-disc list-inside text-sm text-gray-700 w-full max-w-3xl mx-auto">
+                {files.map((f,i)=> <li key={`${f.name}-${i}`} className="break-words">{f.name}</li>)}
+              </ul>
+            )}
+
+            {/* Extracted preview */}
+            {rows.length>0 && (
+              <div ref={resultsRef} className="mt-6 w-full max-w-4xl mx-auto">
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Extracted CVPs</h3>
+                <ul className="list-disc list-inside text-sm text-gray-800 space-y-1">
+                  {rows.map((r,i)=> (
+                    <li key={i}>
+                      <span className="font-medium">{r.source}</span>{r.page? <span className="text-gray-500"> — p. {r.page}</span>:null}
+                      <div className="text-gray-700">{r.text}</div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </section>
+        );
+      }
+
+      // --- Helpers (best-effort markdown + extraction) ---
+      async function fileToMarkdownUnits(file) {
+        const ext = (file.name.split('.').pop()||'').toLowerCase();
+        if (ext === 'url') {
+          const t = await file.text();
+          const m = t.match(/URL=(.+)/i);
+          const url = (m ? m[1] : t).trim();
+          return [{ text: `# ${file.name}\n\nSource URL: ${url}`, page: null }];
+        }
+        const ab = await file.arrayBuffer();
+        const text = extractPrintableText(new Uint8Array(ab));
+        if (ext === 'pdf') {
+          const seg = segmentByPages(text);
+          if (seg.length) return seg.map((t,i)=> ({ text: `# ${file.name}\n\n${t}`, page: i+1 }));
+        }
+        return [{ text: `# ${file.name}\n\n${text}`, page: null }];
+      }
+
+      function extractPrintableText(bytes) {
+        let out = ''; let run = [];
+        const flush = () => { if (!run.length) return; try { const s = new TextDecoder('utf-8',{fatal:false}).decode(new Uint8Array(run)); if (/\w/.test(s)) out += s + ' '; } catch {} run = []; };
+        for (let i=0;i<bytes.length;i++){ const b=bytes[i]; const printable=(b>=32&&b<=126)||b>=160; if (printable) run.push(b); else flush(); }
+        flush();
+        return out.replace(/[\r\t]+/g,' ').replace(/\s{2,}/g,' ').replace(/([.!?])\s+/g,'$1\n').trim();
+      }
+      function segmentByPages(text){ return text.split(/\f|\n\s*-{5,}\s*\n/g).filter(Boolean); }
+
+      function splitIntoUnits(text){
+        if (!text) return [];
+        const cleaned = text
+          .replace(/[\u00AD\u200B\u200C\u200D]/g,'')
+          .replace(/\n\s*-{2,}\s*\n/g,'\n')
+          .replace(/\n?\s*Page\s+\d+(\s+of\s+\d+)?\s*\n/gi,'\n')
+          .replace(/[ \t\r]+/g,' ')
+          .replace(/\s{2,}/g,' ')
+          .trim();
+        const paras = cleaned.split(/\n{2,}/).map(p=>p.trim()).filter(Boolean);
+        const units=[];
+        for (const p of paras){
+          const sentences = p.length>160 ? (p.match(/[^.!?]+[.!?]+(\s+|$)/g) || [p]) : [p];
+          for (const s of sentences){ const st=s.trim(); if (preFilter(st)) units.push(st); }
+        }
+        return units;
+      }
+      function preFilter(s){ const t=s.trim(); if(!t) return false; const len=t.length; const words=t.split(/\s+/).length; if(len<50||len>500) return false; if(words<8) return false; if((t.match(/[;,]/g)||[]).length>=4) return false; if(/^figure\b|^table\b|^appendix\b|^references\b/i.test(t)) return false; if(/copyright|cookie|privacy|terms|subscribe|login|table of contents/i.test(t)) return false; const tokens=t.split(/\s+/); const numish=tokens.filter(x=>/[\d%$]/.test(x)).length; if(numish/tokens.length>0.5) return false; return true; }
+      function dedupeByText(items){ const seen=new Set(); const out=[]; for(const it of items){ const k=(it.text||'').toLowerCase(); if(!seen.has(k)){ seen.add(k); out.push(it);} } return out; }
+
+      const LEX = {
+        benefitsCosts: ['benefit','benefits','value','outcome','outcomes','improve','enhance','optimize','save time','save cost','reduce cost','lower cost','cost savings','efficiency','effectiveness','reliability','trust','security','scalable','performance','usability','experience','roi','return on investment','total cost of ownership','tco'],
+        costsOnly: ['price','cost','risk','time-to-market','maintenance','operational cost','capex','opex'],
+        differentiation: ['differentiate','differentiated','unique','only','unmatched','best-in-class','competitive advantage','distinctive','proprietary','patented','one-of-a-kind','superior'],
+        competitors: ['vs competitor','than competitors','compared to','benchmark','market leader','leaders','alternative','alternatives'],
+        valueFunctional: ['functional','performance','availability','reliability','scalability','latency','throughput','interoperability','compliance','security','privacy'],
+        valueExperiential: ['experiential','experience','ease of use','usability','design','aesthetics','brand','support','service','customer success','onboarding'],
+        lifecycle: ['before use','pre-sale','onboarding','during use','in-use','after use','post-sale','renewal','adoption','retention','customer journey','lifecycle','co-create','co-created','co-creation'],
+        resourceSharing: ['partner','partners','alliance','alliances','ecosystem','integration with','joint','co-innovate','co-develop','collaborat','api','platform partnership'],
+        configuration: ['configure','configured','configuration','orchestrate','orchestration','bundle','bundled','solutioning','process','processes','operating model','capability','capabilities','resource','resources','platform','architecture','framework'],
+        designSegment: ['for enterprises','for smb','for consumers','for operators','for manufacturers','segment','vertical','for banks','for healthcare','for government','for telco','for education','for retail','target customers','customer segment','persona'],
+      };
+      function countHits(t, words){ const lower=t.toLowerCase(); return words.reduce((a,w)=> lower.includes(w)? a+1 : a, 0); }
+      function matchCriteria(text){ const t=text.toLowerCase(); const c={
+        benefitsCosts: countHits(t,LEX.benefitsCosts)+countHits(t,LEX.costsOnly)>0,
+        differentiation: countHits(t,LEX.differentiation)+countHits(t,LEX.competitors)>0,
+        valueElements: countHits(t,LEX.valueFunctional)>0 || countHits(t,LEX.valueExperiential)>0,
+        lifecycle: countHits(t,LEX.lifecycle)>0,
+        resourceSharing: countHits(t,LEX.resourceSharing)>0,
+        configuration: countHits(t,LEX.configuration)>0,
+        designSegment: countHits(t,LEX.designSegment)>0,
+      }; const hasVPWord=/\b(cvps?|value\s+proposition(s)?)\b/i.test(t); const valueBoth=countHits(t,LEX.valueFunctional)>0 && countHits(t,LEX.valueExperiential)>0; const count=Object.values(c).filter(Boolean).length; return { ...c, count, hasVPWord, valueBoth}; }
+      function isCVP(text){ if(!preFilter(text)) return false; const c=matchCriteria(text); let ok=c.count>=3; const strongPair=(c.resourceSharing&&c.configuration)||(c.differentiation&&c.valueElements); const targetedStrong=(c.differentiation||c.configuration||c.resourceSharing)&&c.designSegment; if(strongPair||targetedStrong||c.valueBoth) ok=true; if(c.hasVPWord&&c.count<3&&!strongPair&&!c.valueBoth) ok=false; return ok; }
+
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<CVPTabbedUploader />);
+    </script>
+  </body>
+  </html>

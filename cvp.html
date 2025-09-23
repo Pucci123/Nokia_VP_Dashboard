@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CVP Analysis Visualizer</title>
+    <style>
+      :root { --bg:#f7f7fb; --card:#ffffff; --muted:#6b7280; --text:#1f2937; --accent:#2563eb; --accent-2:#16a34a; --warn:#d97706; --danger:#dc2626; --border:#e5e7eb; }
+      *{box-sizing:border-box} html,body{height:100%} body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,Noto Sans,"Apple Color Emoji","Segoe UI Emoji"}
+      .container{max-width:1100px;margin:0 auto;padding:24px 16px}
+      h1{font-size:24px;margin:0 0 6px}.subtitle{color:var(--muted);margin:0 0 12px}
+      .tabs{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:16px}
+      .tab{background:var(--card);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:0;cursor:pointer;text-align:center;box-shadow:0 1px 2px rgba(0,0,0,0.04)}
+      .tab.active{border-color:var(--accent);background:#eef2ff}
+      .tab:hover{border-color:#cbd5e1}
+      .panel{display:none}.panel.active{display:block}
+      .card{background:var(--card);border:1px solid var(--border);border-radius:0;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.06)}
+      .uploader .title{font-size:18px;font-weight:600;margin-bottom:12px}
+      .upload-area{border:2px dashed var(--border);border-radius:0;padding:18px;text-align:center;color:var(--muted);background:#fafafa}
+      .upload-area.dragover{border-color:var(--accent);background:#eef2ff;color:var(--accent)}
+      .file-list{margin-top:10px;font-size:14px;color:var(--text);border:1px solid var(--border);background:#fafafa;border-radius:0;padding:8px;max-height:140px;overflow:auto}
+      .file-list li{margin:4px 0;color:var(--muted)}
+      .controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+      .btn{background:#ffffff;color:var(--text);border:1px solid var(--border);border-radius:0;padding:8px 12px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,0.04)}
+      .btn.primary{border-color:var(--accent);color:var(--accent);background:#eef2ff} .btn.success{border-color:var(--accent-2);color:var(--accent-2);background:#ecfdf5} .btn.warn{border-color:var(--warn);color:var(--warn);background:#fff7ed}
+      .search{margin-left:auto}
+      .search input{background:#0f1116;border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);min-width:220px}
+      table{width:100%;border-collapse:collapse;margin-top:12px}
+      thead th{text-align:left;font-size:12px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);background:#f9fafb;padding:8px}
+      tbody td{border-bottom:1px solid var(--border);padding:10px 8px;vertical-align:top}
+      tbody tr:hover{background:#f8fafc}
+      .col-extracted{width:55%}.col-source{width:25%;color:var(--muted)}.col-page{width:8%;color:var(--muted)}.col-class{width:12%}
+      .tag{padding:3px 8px;border-radius:0;border:1px solid var(--border);font-size:12px;background:#fff}
+      .tag.pop{border-color:var(--warn);color:var(--warn);background:#fffbeb}.tag.pod{border-color:var(--accent-2);color:var(--accent-2);background:#ecfdf5}
+      .footnote{color:var(--muted);font-size:12px}
+      @media (max-width:800px){.tabs{grid-template-columns:1fr}}
+      .inline-form{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+      .inline-form input[type="url"]{background:#ffffff;border:1px solid var(--border);border-radius:0;padding:8px 10px;color:var(--text)}
+      .inline-form input[type="url"]{min-width:320px}
+      /* removed textarea */
+      .inline-form .btn{align-self:start}
+    </style>
+  </head>
+  <body>
+    <header class="container">
+      <h1>Customer Value Proposition (CVP) Analysis</h1>
+      <p class="subtitle">Upload documents, extract CVPs, classify resources, and evaluate PoP/PoD.</p>
+    </header>
+    <main class="container">
+      <div class="tabs" role="tablist" aria-label="CVP Sections">
+        <button class="tab active" data-tab="academic" role="tab">Customer Value Propositions (Academic/General Sources)</button>
+        <button class="tab" data-tab="nokia" role="tab">Nokia</button>
+        <button class="tab" data-tab="competitors" role="tab">Nokia’s Competitors</button>
+        <button class="tab" data-tab="quantum" role="tab">Quantum Security</button>
+      </div>
+      <section id="panel-academic" class="panel active" aria-labelledby="academic"><div class="uploader" data-key="academic"></div></section>
+      <section id="panel-nokia" class="panel" aria-labelledby="nokia"><div class="uploader" data-key="nokia"></div></section>
+      <section id="panel-competitors" class="panel" aria-labelledby="competitors"><div class="uploader" data-key="competitors"></div></section>
+      <section id="panel-quantum" class="panel" aria-labelledby="quantum"><div class="uploader" data-key="quantum"></div></section>
+    </main>
+    <footer class="container footnote">
+      <p>References: Payne, Frow & Eggert (2017, 2020). PDFs use pdf.js for accurate page text; DOCX via mammoth.js; XLSX via SheetJS.</p>
+    </footer>
+    <!-- External libs via CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>if(window['pdfjsLib']){window['pdfjsLib'].GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';}</script>
+    <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/dist/mammoth.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.19.3/dist/xlsx.full.min.js"></script>
+    <script>
+      const SECTION_TITLES={academic:'Customer Value Propositions (Academic/General Sources)',nokia:'Nokia',competitors:'Nokia\u2019s Competitors',quantum:'Quantum Security'};
+      const state={academic:{files:[],items:[],filtered:[]},nokia:{files:[],items:[],filtered:[]},competitors:{files:[],items:[],filtered:[]},quantum:{files:[],items:[],filtered:[]}};
+      const debounce=(fn,delay=300)=>{let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),delay)}};
+      function setupTabs(){const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');tabs.forEach(tab=>{tab.addEventListener('click',()=>{tabs.forEach(t=>t.classList.remove('active'));panels.forEach(p=>p.classList.remove('active'));tab.classList.add('active');const key=tab.getAttribute('data-tab');document.getElementById(`panel-${key}`).classList.add('active')})})}
+      function setupUploaders(){document.querySelectorAll('.uploader').forEach(node=>{const key=node.getAttribute('data-key');renderUploader(node,key)})}
+      function renderUploader(node,key){node.innerHTML='';const card=document.createElement('div');card.className='card';const title=document.createElement('div');title.className='title';title.textContent=SECTION_TITLES[key];const uploadArea=document.createElement('label');uploadArea.className='upload-area w-full rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 hover:bg-gray-100 p-6 text-center text-gray-600 cursor-pointer transition-colors';uploadArea.innerHTML=`<div class=\"text-sm\">Drag & drop files here or <span class=\"underline\">click to upload<\/span><\/div><div style="margin-top:6px; font-size:12px;">Accepted: .pdf .docx .xlsx .url<\/div><input type="file" multiple style="display:none" accept=\".pdf,.docx,.xlsx,.url\" \/>`;const input=uploadArea.querySelector('input');uploadArea.addEventListener('click',()=>input.click());uploadArea.addEventListener('dragover',e=>{e.preventDefault();uploadArea.classList.add('border-blue-500')});uploadArea.addEventListener('dragleave',()=>uploadArea.classList.remove('border-blue-500'));uploadArea.addEventListener('drop',e=>{e.preventDefault();uploadArea.classList.remove('border-blue-500');handleFiles(key,e.dataTransfer.files)});input.addEventListener('change',e=>handleFiles(key,e.target.files));const fileList=document.createElement('ul');fileList.className='file-list';const manual=document.createElement('div');manual.className='inline-form';manual.innerHTML=`<input type="url" placeholder="Paste URL (https:\/\/...)" \/><button class="btn" data-action="add-url">Add URL<\/button>`;const controls=document.createElement('div');controls.className='controls';controls.innerHTML=`<button class="btn primary" data-action="extract">Extract CVPs<\/button><button class="btn" data-action="classify-res">Classify Resources<\/button><button class="btn" data-action="classify-pop">Classify PoP\/PoD<\/button><button class="btn success" data-action="download">Download CSV<\/button><div class="search"><input type="search" placeholder="Search table..." \/><\/div>`;const tableWrap=document.createElement('div');tableWrap.innerHTML=tableTemplate();card.appendChild(title);card.appendChild(uploadArea);card.appendChild(fileList);card.appendChild(manual);card.appendChild(controls);card.appendChild(tableWrap);node.appendChild(card);controls.querySelector('[data-action="extract"]').addEventListener('click',()=>extractCVPs(key));controls.querySelector('[data-action="classify-res"]').addEventListener('click',()=>classifyResources(key));controls.querySelector('[data-action="classify-pop"]').addEventListener('click',()=>classifyPoP(key));controls.querySelector('[data-action="download"]').addEventListener('click',()=>downloadCSV(key));const searchInput=controls.querySelector('input[type="search"]');searchInput.addEventListener('input',debounce(()=>applySearch(key,searchInput.value)));const urlInput=manual.querySelector('input[type="url"]');manual.querySelector('[data-action="add-url"]').addEventListener('click',async()=>{const url=(urlInput.value||'').trim();if(!url)return;addUrlEntry(key,url);urlInput.value=''});state[key].dom={fileList,tbody:tableWrap.querySelector('tbody'),searchInput};renderFileList(key);renderTable(key)}
+      function handleFiles(key,files){const arr=Array.from(files);const wrapped=arr.map(f=>({kind:'file',file:f}));state[key].files.push(...wrapped);renderFileList(key)}
+      function addUrlEntry(key,url){state[key].files.push({kind:'url',url});renderFileList(key)}
+      function addTextEntry(key,name,text){state[key].files.push({kind:'text',name,text});renderFileList(key)}
+      function renderFileList(key){const ul=state[key].dom.fileList;ul.innerHTML='';state[key].files.forEach(entry=>{const li=document.createElement('li');if(entry.kind==='file'){const f=entry.file;li.textContent=`${f.name} (${formatSize(f.size)})`}else if(entry.kind==='url'){li.textContent=`URL: ${entry.url}`}else if(entry.kind==='text'){li.textContent=`${entry.name} (pasted text)`}ul.appendChild(li)})}
+      function tableTemplate(){return `<table><thead><tr><th class="col-extracted">Extracted Text<\/th><th class="col-source">Source<\/th><th class="col-page">Page<\/th><th class="col-class">Classification<\/th><th class="col-class">PoP\/PoD<\/th><\/tr><\/thead><tbody><\/tbody><\/table>`}
+      function renderTable(key){const tbody=state[key].dom.tbody;const rows=state[key].filtered.length?state[key].filtered:state[key].items;tbody.innerHTML='';rows.forEach(row=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${escapeHtml(row.text)}<\/td><td class="col-source">${escapeHtml(row.source)}<\/td><td class="col-page">${row.page??''}<\/td><td>${row.resourceClass?tag(row.resourceClass):''}<\/td><td>${row.pop?tag(row.pop):''}<\/td>`;tbody.appendChild(tr)})}
+      function tag(kind){const map={firm:'Firm-Based',market:'Market-Based',mixed:'Mixed',pop:'PoP',pod:'PoD'};const cls=kind==='pop'||kind==='pod'?kind:kind;return `<span class="tag ${cls}">${map[kind]||kind}<\/span>`}
+      function applySearch(key,q){const rows=state[key].items;const needle=(q||'').toLowerCase();state[key].filtered=needle?rows.filter(r=>[r.text,r.source,String(r.page||'')].some(x=>(x||'').toLowerCase().includes(needle))):[];renderTable(key)}
+      function downloadCSV(key){const rows=state[key].filtered.length?state[key].filtered:state[key].items;const header=['Extracted Text','Source','Page','Classification','PoP/PoD'];const csv=[header].concat(rows.map(r=>[r.text,r.source,r.page??'',prettyClass(r.resourceClass),prettyClass(r.pop)].map(csvEscape).join(','))).join('\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`${key}-cvps.csv`;a.click();URL.revokeObjectURL(url)}
+      function prettyClass(k){if(!k)return'';const map={firm:'Firm-Based',market:'Market-Based',mixed:'Mixed',pop:'PoP',pod:'PoD'};return map[k]||k}
+      function csvEscape(s){const str=String(s??'');if(/[",\n]/.test(str))return '"'+str.replace(/"/g,'""')+'"';return str}
+      function formatSize(bytes){if(bytes===0)return'0 B';const k=1024;const sizes=['B','KB','MB','GB'];const i=Math.floor(Math.log(bytes)/Math.log(k));return parseFloat((bytes/Math.pow(k,i)).toFixed(2))+' '+sizes[i]}
+      async function extractCVPs(key){const files=state[key].files;if(!files.length)return alert('Please upload or add a source.');const extracted=[];for(const entry of files){try{if(entry.kind==='file'){const f=entry.file;const unitsWithPages=await fileToMarkdownUnits(f);unitsWithPages.forEach(({text,page})=>{const units=splitIntoUnits(text);units.forEach(u=>{if(isCVP(u))extracted.push({text:u.trim(),source:f.name,page:page??''})})})}else if(entry.kind==='url'){const units=await urlToTextUnits(entry.url);units.forEach(({text,page})=>{const split=splitIntoUnits(text);split.forEach(u=>{if(isCVP(u))extracted.push({text:u.trim(),source:entry.url,page:page??''})})})}else if(entry.kind==='text'){const units=splitIntoUnits(entry.text);units.forEach(u=>{if(isCVP(u))extracted.push({text:u.trim(),source:entry.name,page:''})})}}catch(e){console.warn('Failed to parse source',entry,e)}}state[key].items=dedupeByText(extracted);state[key].filtered=[];renderTable(key)}
+      const LEX={
+        benefitsCosts:['benefit','benefits','value','outcome','outcomes','improve','enhance','optimize','save time','save cost','reduce cost','lower cost','cost savings','efficiency','effectiveness','reliability','trust','security','scalable','performance','usability','experience','roi','return on investment','total cost of ownership','tco'],
+        costsOnly:['price','cost','risk','time-to-market','maintenance','operational cost','capex','opex'],
+        differentiation:['differentiate','differentiated','unique','only','unmatched','best-in-class','competitive advantage','distinctive','proprietary','patented','one-of-a-kind','superior'],
+        competitors:['vs competitor','than competitors','compared to','benchmark','market leader','leaders','alternative','alternatives'],
+        valueFunctional:['functional','performance','availability','reliability','scalability','latency','throughput','interoperability','compliance','security','privacy'],
+        valueExperiential:['experiential','experience','ease of use','usability','design','aesthetics','brand','support','service','customer success','onboarding'],
+        lifecycle:['before use','pre-sale','onboarding','during use','in-use','after use','post-sale','renewal','adoption','retention','customer journey','lifecycle','co-create','co-created','co-creation'],
+        resourceSharing:['partner','partners','alliance','alliances','ecosystem','integration with','joint','co-innovate','co-develop','collaborat','api','platform partnership'],
+        configuration:['configure','configured','configuration','orchestrate','orchestration','bundle','bundled','solutioning','process','processes','operating model','capability','capabilities','resource','resources','platform','architecture','framework'],
+        designSegment:['for enterprises','for smb','for consumers','for operators','for manufacturers','segment','vertical','for banks','for healthcare','for government','for telco','for education','for retail','target customers','customer segment','persona']
+      };
+      function countHits(text,words){const t=text.toLowerCase();return words.reduce((a,w)=>t.includes(w)?a+1:a,0)}
+      function matchCriteria(text){const t=text.toLowerCase();const c={
+          benefitsCosts:countHits(t,LEX.benefitsCosts)+countHits(t,LEX.costsOnly)>0,
+          differentiation:countHits(t,LEX.differentiation)+countHits(t,LEX.competitors)>0,
+          valueElements:(countHits(t,LEX.valueFunctional)>0)||(countHits(t,LEX.valueExperiential)>0),
+          lifecycle:countHits(t,LEX.lifecycle)>0,
+          resourceSharing:countHits(t,LEX.resourceSharing)>0,
+          configuration:countHits(t,LEX.configuration)>0,
+          designSegment:countHits(t,LEX.designSegment)>0,
+      }; c.count=Object.values(c).filter(Boolean).length; c.hasVPWord=/\b(cvps?|value\s+proposition(s)?)\b/i.test(t); c.valueBoth=(countHits(t,LEX.valueFunctional)>0)&&(countHits(t,LEX.valueExperiential)>0); return c;}
+      function isCVP(text){if(!preFilterUnit(text))return false;const c=matchCriteria(text);let ok=c.count>=3;const strongPair=(c.resourceSharing&&c.configuration)||(c.differentiation&&c.valueElements);const targetedStrong=(c.differentiation||c.configuration||c.resourceSharing)&&c.designSegment;if(strongPair||targetedStrong||c.valueBoth) ok=true; if(c.hasVPWord&&c.count<3&&!strongPair&&!c.valueBoth) ok=false; return ok}
+      function splitIntoUnits(text){if(!text)return[];const cleaned=normalizeTextForUnits(text);const paras=cleaned.split(/\n{2,}/).map(p=>p.trim()).filter(Boolean);const units=[];for(const p of paras){const sentences=p.length>160?p.split(/(?<=[\.!?])\s+(?=[A-Z(\[])/):[p];for(const s of sentences){const st=s.trim();if(preFilterUnit(st))units.push(st)}}return units}
+      function normalizeTextForUnits(text){return text.replace(/[\u00AD\u200B\u200C\u200D]/g,'').replace(/\n\s*-{2,}\s*\n/g,'\n').replace(/\n?\s*Page\s+\d+(\s+of\s+\d+)?\s*\n/gi,'\n').replace(/\n?\s*Confidential\s*\n/gi,'\n').replace(/[\t\r]+/g,' ').replace(/\s{2,}/g,' ').trim()}
+      function preFilterUnit(s){const text=s.trim();if(!text)return false;const len=text.length;const words=text.split(/\s+/).length; if(len<50||len>500)return false; if(words<8)return false; if((text.match(/[;,]/g)||[]).length>=4)return false; if(/^figure\b|^table\b|^appendix\b|^references\b/i.test(text))return false; if(/copyright|cookie|privacy|terms|subscribe|login|table of contents/i.test(text))return false; const tokens=text.split(/\s+/); const numish=tokens.filter(t=>/[\d%$]/.test(t)).length; if(numish/tokens.length>0.5)return false; return true}
+      function dedupeByText(items){const seen=new Set();const out=[];items.forEach(it=>{const key=it.text.toLowerCase();if(!seen.has(key)){seen.add(key);out.push(it)}});return out}
+      function classifyResources(key){const items=state[key].items;items.forEach(r=>{const t=r.text.toLowerCase();const firmHits=countHits(t,['leadership','strategy','strategic alignment','internal','capability','capabilities','process','processes','product knowledge','technical expertise','operations','operational','platform','infrastructure','scalable architecture']);const marketHits=countHits(t,['customer','client','consumer','market','competitor','brand','branding','relationship','insight','market insight','innovation','innovative','culture','co-create','partnership','ecosystem','partner']);r.resourceClass=firmHits&&marketHits?'mixed':firmHits?'firm':marketHits?'market':undefined});renderTable(key)}
+      function classifyPoP(key){const items=state[key].items;items.forEach(r=>{const t=r.text.toLowerCase();const podHits=countHits(t,['unique','only','first','leading','best-in-class','differentiated','proprietary','patented','exclusive','distinctive','unmatched','state-of-the-art']);const popHits=countHits(t,['standard','compliant','compliance','baseline','expected','required','industry standard','best practice','meets requirements','mandatory']);r.pop=podHits>popHits?'pod':popHits>0&&podHits===0?'pop':undefined});renderTable(key)}
+      async function fileToMarkdownUnits(file){const ext=file.name.toLowerCase().split('.').pop();if(ext==='url'){const text=await readAsText(file);const urlMatch=text.match(/URL=(.+)/i);const url=urlMatch?urlMatch[1].trim():text.trim();return[{text:`# ${file.name}\n\nSource URL: ${url}`,page:null}]}
+        if(ext==='pdf'){try{if(window.pdfjsLib){const pages=await extractPdfWithPdfjs(file);if(pages&&pages.length)return pages}}catch(e){console.warn('pdf.js extraction failed, falling back to heuristic',e)}const ab=await readAsArrayBuffer(file);const pages=extractPrintableTextWithPages(new Uint8Array(ab),ext);return pages.length?pages:[{text:extractPrintableText(new Uint8Array(ab)),page:null}]}
+        if(ext==='docx'){const ab=await readAsArrayBuffer(file);try{if(window.mammoth&&window.mammoth.convertToHtml){const res=await window.mammoth.convertToHtml({arrayBuffer:ab});const html=res.value||'';const text=htmlToPlainText(html);return[{page:null,text}]}}catch(e){console.warn('mammoth.js extraction failed, fallback to heuristic',e)}const pages=extractPrintableTextWithPages(new Uint8Array(ab),ext);return pages.length?pages:[{text:extractPrintableText(new Uint8Array(ab)),page:null}]}
+        if(ext==='xlsx'){const ab=await readAsArrayBuffer(file);try{if(window.XLSX){const wb=window.XLSX.read(ab,{type:'array'});const out=[];wb.SheetNames.forEach(name=>{const ws=wb.Sheets[name];if(!ws)return;const csv=window.XLSX.utils.sheet_to_csv(ws,{blankrows:false});const text=`Sheet: ${name}\n\n${csv}`;out.push({page:null,text})});if(out.length)return out}}catch(e){console.warn('SheetJS extraction failed, fallback to heuristic',e)}const pages=extractPrintableTextWithPages(new Uint8Array(ab),ext);return pages.length?pages:[{text:extractPrintableText(new Uint8Array(ab)),page:null}]}
+        try{return[{text:await readAsText(file),page:null}]}catch{return[{text:`# ${file.name}`,page:null}]}}
+      function extractPrintableText(bytes){let out='';let run=[];const flush=()=>{if(run.length){try{const txt=new TextDecoder('utf-8',{fatal:false}).decode(new Uint8Array(run));if(/\w/.test(txt))out+=txt+' '}catch{}run=[]}};for(let i=0;i<bytes.length;i++){const b=bytes[i];const printable=(b>=32&&b<=126)||(b>=160);if(printable)run.push(b);else flush()}flush();return out.replace(/[\r\t]+/g,' ').replace(/\s{2,}/g,' ').replace(/(\.|!|\?)\s+/g,'$1\n')}
+      function extractPrintableTextWithPages(bytes,ext){const text=extractPrintableText(bytes);const lines=text.split(/\n+/);let segments=[];let current={page:null,text:[]};let lastPage=null;const pageRegex=/^\s*(page|pg)\s*(\d{1,4})\b/i;for(const line of lines){const m=line.match(pageRegex);if(m){if(current.text.length)segments.push({page:current.page,text:current.text.join('\n')});lastPage=parseInt(m[2],10);current={page:lastPage,text:[]};continue}current.text.push(line)}if(current.text.length)segments.push({page:current.page,text:current.text.join('\n')});if((!segments.length||segments.every(s=>s.page==null))&&ext==='pdf'){const altPages=text.split(/\f|\n\s*-{5,}\s*\n/g);if(altPages.length>1){segments=altPages.map((t,i)=>({page:i+1,text:t}))}}if(!segments.length)return[{page:null,text}];return segments}
+      async function extractPdfWithPdfjs(file){const ab=await readAsArrayBuffer(file);const pdfjs=window.pdfjsLib;const task=pdfjs.getDocument({data:ab});const pdf=await task.promise;const results=[];for(let pageNum=1;pageNum<=pdf.numPages;pageNum++){const page=await pdf.getPage(pageNum);const content=await page.getTextContent();const raw=content.items.map(it=>(it.str||'')).join(' ');const text=raw.replace(/[\t\r]+/g,' ').replace(/\s{2,}/g,' ').replace(/([\.!?])\s+/g,'$1\n').trim();if(text)results.push({page:pageNum,text})}return results}
+      function htmlToPlainText(html){const tmp=document.createElement('div');tmp.innerHTML=html;tmp.querySelectorAll('script,style,nav,footer,header,aside,form').forEach(el=>el.remove());tmp.querySelectorAll('[role="navigation"], [aria-hidden="true"]').forEach(el=>el.remove());const blockTags=new Set(['P','DIV','LI','H1','H2','H3','H4','H5','H6','TABLE','TR']);const walker=document.createTreeWalker(tmp,NodeFilter.SHOW_TEXT,null);let lastBlock=null;let text='';while(walker.nextNode()){const node=walker.currentNode;const parent=node.parentElement;if(!parent)continue;const isHidden=parent.closest('[hidden], [aria-hidden="true"], style[display="none"]');if(isHidden)continue;const isBlock=blockTags.has(parent.tagName);const content=node.nodeValue.replace(/[\s\u00A0]+/g,' ').trim();if(!content)continue;if(isBlock&&lastBlock!==parent){text+=(text?'\n':'');lastBlock=parent}else if(text){text+=' '}text+=content}return text.replace(/[\t\r]+/g,' ').replace(/\s{2,}/g,' ').replace(/([\.!?])\s+/g,'$1\n').trim()}
+      async function urlToTextUnits(url){try{const res=await fetch(url,{mode:'cors'});if(!res.ok)throw new Error(`HTTP ${res.status}`);const ct=res.headers.get('content-type')||'';if(ct.includes('text/html')){const html=await res.text();const text=htmlToPlainText(html);return[{page:null,text}]}if(ct.includes('application/pdf')){return[{page:null,text:`Source URL (PDF): ${url}`}]};const text=await res.text();return[{page:null,text}]}catch(e){console.warn('URL fetch failed, using placeholder',e);return[{page:null,text:`Source URL: ${url}`}]}}
+      function readAsText(file){return new Promise((resolve,reject)=>{const fr=new FileReader();fr.onerror=()=>reject(fr.error);fr.onload=()=>resolve(String(fr.result));fr.readAsText(file)})}
+      function readAsArrayBuffer(file){return new Promise((resolve,reject)=>{const fr=new FileReader();fr.onerror=()=>reject(fr.error);fr.onload=()=>resolve(fr.result);fr.readAsArrayBuffer(file)})}
+      function escapeHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;').replace(/'/g,'&#039;')}
+      window.addEventListener('DOMContentLoaded',()=>{setupTabs();setupUploaders()})
+    </script>
+  </body>
+</html>

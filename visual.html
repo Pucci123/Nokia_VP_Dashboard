@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Data Visual (Clean)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --bg: #0b0e14;
+        --panel: #101520;
+        --panel-2: #0f1420;
+        --text: #e6e8ee;
+        --muted: #a9b0bf;
+        --primary: #5b8def;
+        --accent: #7dd3fc;
+        --border: #1b2333;
+        --ok: #22c55e;
+        --warn: #f59e0b;
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+        color: var(--text);
+        background: radial-gradient(1200px 800px at 20% -10%, #14203a 0%, #0b0e14 40%), var(--bg);
+        background-attachment: fixed;
+      }
+      .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+      header { padding: 24px 0 12px; }
+      h1 { font-size: 28px; margin: 0; font-weight: 700; letter-spacing: 0.2px; }
+      .sub { color: var(--muted); margin-top: 6px; }
+      .panel {
+        background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.0)), var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.04);
+      }
+      .row { display: grid; grid-template-columns: 1.1fr 1fr; gap: 16px; }
+      @media (max-width: 960px) { .row { grid-template-columns: 1fr; } }
+      .pad { padding: 16px; }
+      .toolbar { display:flex; gap:8px; align-items:center; justify-content: space-between; margin-bottom: 8px; }
+      .left, .right { display:flex; gap:8px; align-items:center; }
+      .btn {
+        background: #111827;
+        color: var(--text);
+        border: 1px solid var(--border);
+        padding: 8px 12px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 500;
+      }
+      .btn:hover { background: #0f172a; }
+      .btn.primary { background: linear-gradient(180deg, #4f7de9, #3c6ae0); border-color: #335dc4; }
+      .btn.primary:hover { filter: brightness(1.06); }
+      .select, .input {
+        background: #0f172a;
+        color: var(--text);
+        border: 1px solid var(--border);
+        padding: 8px 12px;
+        border-radius: 10px;
+      }
+      .grid3 { display:grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+      @media (max-width: 640px) { .grid3 { grid-template-columns: 1fr; } }
+      .stat { padding: 14px; border:1px solid var(--border); border-radius: 12px; background: var(--panel-2); }
+      .stat .k { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.8px; }
+      .stat .v { margin-top: 6px; font-size: 20px; font-weight: 700; }
+      canvas { width: 100% !important; height: 360px !important; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+      th { text-align: left; color: var(--muted); font-weight: 600; font-size: 12px; letter-spacing: 0.6px; }
+      tr:hover td { background: rgba(255,255,255,0.02); }
+      .foot { color: var(--muted); font-size: 12px; margin-top: 16px; text-align: center; }
+      .hint { color: var(--muted); font-size: 12px; }
+      .code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; background: #0b1020; border:1px solid var(--border); padding: 2px 6px; border-radius: 6px; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Data Visual</h1>
+        <div class="sub">Paste your data below to render clean charts and a table.</div>
+      </header>
+
+      <div class="row">
+        <section class="panel pad">
+          <div class="toolbar">
+            <div class="left">
+              <label class="hint">Chart:</label>
+              <select id="chartType" class="select">
+                <option value="bar">Bar</option>
+                <option value="line">Line</option>
+                <option value="pie">Pie</option>
+                <option value="doughnut">Doughnut</option>
+                <option value="radar">Radar</option>
+              </select>
+              <label class="hint">Palette:</label>
+              <select id="palette" class="select">
+                <option value="blue">Blue</option>
+                <option value="teal">Teal</option>
+                <option value="magma">Magma</option>
+              </select>
+            </div>
+            <div class="right">
+              <button id="loadSample" class="btn">Load Sample</button>
+              <button id="render" class="btn primary">Render</button>
+            </div>
+          </div>
+          <canvas id="chart"></canvas>
+          <div class="grid3" style="margin-top:12px">
+            <div class="stat"><div class="k">Count</div><div id="stat-count" class="v">0</div></div>
+            <div class="stat"><div class="k">Total</div><div id="stat-total" class="v">0</div></div>
+            <div class="stat"><div class="k">Average</div><div id="stat-avg" class="v">0</div></div>
+          </div>
+        </section>
+
+        <section class="panel pad">
+          <div class="toolbar" style="margin-bottom:6px">
+            <div class="left" style="gap:6px">
+              <strong>Data</strong>
+              <span class="hint">Accepts JSON array of {label, value} or 2-col CSV</span>
+            </div>
+            <div class="right">
+              <button id="copyTemplate" class="btn">Copy JSON Template</button>
+            </div>
+          </div>
+          <textarea id="dataInput" class="input" placeholder='[
+  { "label": "Category A", "value": 42 },
+  { "label": "Category B", "value": 35 }
+]' style="width:100%; min-height: 220px; resize: vertical;"></textarea>
+          <div class="foot" style="text-align:left; margin-top:10px">
+            Tip: You can also paste simple CSV with two columns like <span class="code">Label,Value</span> on each line.
+          </div>
+          <div style="margin-top:12px; max-height: 280px; overflow: auto" class="panel pad">
+            <table id="dataTable">
+              <thead>
+                <tr><th>#</th><th>Label</th><th>Value</th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <div class="foot">No external backend required. Everything runs in your browser.</div>
+    </div>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script>
+      // Utilities
+      const $ = (sel) => document.querySelector(sel);
+      function niceNumber(n) { return Number.isFinite(n) ? (Math.abs(n) >= 1000 ? n.toLocaleString() : (Math.round(n * 100) / 100).toString()) : '0'; }
+      function parseMaybeJSON(text) {
+        try { const v = JSON.parse(text); if (Array.isArray(v)) return v; } catch {}
+        return null;
+      }
+      function parseSimpleCSV(text) {
+        const rows = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        const out = [];
+        for (const line of rows) {
+          const parts = line.split(',');
+          if (parts.length < 2) continue;
+          const label = parts.slice(0, parts.length - 1).join(',').trim();
+          const value = Number(parts[parts.length - 1].trim());
+          if (!label || !Number.isFinite(value)) continue;
+          out.push({ label, value });
+        }
+        return out;
+      }
+      function getPalette(name, n) {
+        const range = [];
+        const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+        if (name === 'teal') {
+          for (let i=0;i<n;i++) {
+            const t = i/(Math.max(1,n-1));
+            const h = 190 + 20*t; const s = 70; const l = 35 + 20*t;
+            range.push(`hsl(${h} ${s}% ${l}%)`);
+          }
+        } else if (name === 'magma') {
+          for (let i=0;i<n;i++) {
+            const t = i/(Math.max(1,n-1));
+            const h = clamp(260 - 160*t, 0, 360); const s = 75; const l = 30 + 20*t;
+            range.push(`hsl(${h} ${s}% ${l}%)`);
+          }
+        } else {
+          for (let i=0;i<n;i++) {
+            const t = i/(Math.max(1,n-1));
+            const h = 215 - 15*t; const s = 85; const l = 45 + 10*t;
+            range.push(`hsl(${h} ${s}% ${l}%)`);
+          }
+        }
+        return range;
+      }
+
+      function coerceData(text) {
+        const json = parseMaybeJSON(text);
+        if (json) return json.filter(r => r && typeof r.label === 'string' && Number.isFinite(+r.value)).map(r => ({ label: r.label, value: +r.value }));
+        const csv = parseSimpleCSV(text);
+        if (csv && csv.length) return csv;
+        return [];
+      }
+
+      function updateStats(items) {
+        const count = items.length;
+        const total = items.reduce((a,b)=>a+b.value,0);
+        const avg = count ? total / count : 0;
+        $('#stat-count').textContent = niceNumber(count);
+        $('#stat-total').textContent = niceNumber(total);
+        $('#stat-avg').textContent = niceNumber(avg);
+      }
+
+      function fillTable(items) {
+        const tbody = $('#dataTable tbody');
+        tbody.innerHTML = '';
+        items.forEach((row, i) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${i+1}</td><td>${row.label}</td><td>${niceNumber(row.value)}</td>`;
+          tbody.appendChild(tr);
+        });
+      }
+
+      let chart;
+      function renderChart(items) {
+        const ctx = document.getElementById('chart');
+        if (chart) { chart.destroy(); chart = undefined; }
+        const labels = items.map(d => d.label);
+        const values = items.map(d => d.value);
+        const paletteName = $('#palette').value;
+        const colors = getPalette(paletteName, Math.max(values.length, 3));
+        const type = $('#chartType').value || 'bar';
+        chart = new Chart(ctx, {
+          type,
+          data: {
+            labels,
+            datasets: [{
+              label: 'Values',
+              data: values,
+              backgroundColor: ['pie','doughnut','radar'].includes(type) ? colors : colors[0],
+              borderColor: ['pie','doughnut','radar'].includes(type) ? '#0b0e14' : colors.map(c=>c),
+              borderWidth: 1.5,
+              tension: 0.25,
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { labels: { color: '#d2d7e3' } },
+              tooltip: { backgroundColor: '#0f172a', borderColor: '#1b2333', borderWidth: 1 }
+            },
+            scales: (
+              (type==='pie'||type==='doughnut'||type==='radar')
+              ? {}
+              : {
+                  x: { ticks: { color: '#aab3c2' }, grid: { color: 'rgba(255,255,255,0.06)' } },
+                  y: { ticks: { color: '#aab3c2' }, grid: { color: 'rgba(255,255,255,0.06)' }, beginAtZero: true }
+                }
+            )
+          }
+        });
+      }
+
+      // Actions
+      $('#render').addEventListener('click', () => {
+        const input = $('#dataInput').value.trim();
+        const items = coerceData(input);
+        fillTable(items);
+        updateStats(items);
+        renderChart(items);
+      });
+      $('#loadSample').addEventListener('click', () => {
+        const sample = [
+          { label: 'North', value: 42 },
+          { label: 'South', value: 35 },
+          { label: 'East', value: 28 },
+          { label: 'West', value: 54 }
+        ];
+        $('#dataInput').value = JSON.stringify(sample, null, 2);
+        $('#render').click();
+      });
+      $('#copyTemplate').addEventListener('click', async () => {
+        const t = [
+          { label: 'Category A', value: 42 },
+          { label: 'Category B', value: 35 },
+          { label: 'Category C', value: 27 }
+        ];
+        const text = JSON.stringify(t, null, 2);
+        try { await navigator.clipboard.writeText(text); } catch {}
+      });
+
+      // Auto-render if window.DATA is present
+      if (Array.isArray(window.DATA)) {
+        $('#dataInput').value = JSON.stringify(window.DATA, null, 2);
+        $('#render').click();
+      }
+    </script>
+  </body>
+</html>
+

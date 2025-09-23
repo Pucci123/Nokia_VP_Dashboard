@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Quantum Security CVP – Comparative Analysis (Nokia vs. Peers)</title>
+  <style>
+    :root {
+      --bg: #f6f8fc;
+      --panel: #ffffff;
+      --ink: #1f2430;
+      --muted: #6b7280;
+      --accent: #2563eb;
+      --accent-2: #16a34a;
+      --accent-3: #d97706;
+      --accent-4: #dc2626;
+      --border: #e5e7eb;
+      --shadow: 0 2px 14px rgba(16,24,40,0.06);
+    }
+    html, body { margin:0; padding:0; background:var(--bg); color:var(--ink); font: 14px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    a { color: var(--accent); text-decoration: none; }
+    .wrap { max-width: 1100px; margin: 32px auto 80px; padding: 0 16px; }
+    header { margin-bottom: 20px; }
+    header h1 { font-size: 22px; margin: 0 0 8px; }
+    header p { color: var(--muted); margin: 0; }
+
+    .grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 16px; }
+    @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
+
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow); }
+    .panel h2 { font-size: 16px; margin: 0; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+    .panel .body { padding: 14px 16px; }
+    .muted { color: var(--muted); }
+    .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    @media (max-width: 720px) { .kpis { grid-template-columns: repeat(2, 1fr);} }
+    .kpi { background: #f7faff; border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+    .kpi .label { color: var(--muted); font-size: 12px; }
+    .kpi .val { font-weight: 700; font-size: 20px; letter-spacing: 0.2px; }
+
+    /* Simple horizontal bars for visual comparisons */
+    .legend { display: flex; gap: 16px; flex-wrap: wrap; margin: 8px 0 10px; }
+    .legend .key { display:flex; align-items:center; gap:8px; color: var(--muted); font-size: 12px; }
+    .swatch { width:12px; height:12px; border-radius: 2px; display:inline-block; }
+    .sw-pod { background: var(--accent-2); }
+    .sw-pop { background: var(--accent); }
+    .sw-firm { background: var(--accent-2); }
+    .sw-market { background: var(--accent-3); }
+    .sw-mixed { background: var(--accent-4); }
+
+    .rows { display: grid; gap: 10px; }
+    .row { display: grid; grid-template-columns: 180px 1fr; align-items: center; gap: 12px; }
+    @media (max-width: 560px) { .row { grid-template-columns: 1fr; } }
+    .label { font-weight: 600; }
+    .bars { display: grid; gap: 6px; }
+    .bar { background: #eef2f9; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; position: relative; height: 22px; }
+    .bar .fill { height: 100%; display: block; }
+    .bar .txt { position:absolute; inset:0; display:flex; align-items:center; justify-content:space-between; padding:0 8px; color: #1f2a44; font-size: 12px; }
+    .fill.pod { background: linear-gradient(90deg, rgba(86,211,100,0.9), rgba(86,211,100,0.75)); }
+    .fill.pop { background: linear-gradient(90deg, rgba(110,168,254,0.9), rgba(110,168,254,0.75)); }
+
+    .stack { background: #eef2f9; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; height: 26px; display:flex; }
+    .stack .seg { height:100%; }
+    .seg.firm { background: linear-gradient(90deg, rgba(86,211,100,0.95), rgba(86,211,100,0.80)); }
+    .seg.market { background: linear-gradient(90deg, rgba(247,185,85,0.95), rgba(247,185,85,0.80)); }
+    .seg.mixed { background: linear-gradient(90deg, rgba(244,113,116,0.95), rgba(244,113,116,0.80)); }
+    .stack-legend { display:flex; gap:16px; margin-top:8px; color:var(--muted); font-size:12px; }
+
+    ul.tight { margin: 8px 0 0 16px; padding: 0 0 0 8px; }
+    ul.tight li { margin: 6px 0; }
+
+    .callouts { display: grid; gap: 12px; }
+    .callout { background:#f9fbff; border:1px solid var(--border); border-radius:8px; padding:12px; }
+    .callout h3 { font-size: 14px; margin: 0 0 6px; }
+    .pill { display:inline-block; padding:2px 8px; border-radius:999px; background:#f5f7fb; border:1px solid var(--border); color:#374151; font-size:12px; margin-right:6px; }
+
+    .flow { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .flow .step { background:#f9fbff; border:1px solid var(--border); border-radius:8px; padding:8px 10px; font-weight:600; }
+    .flow .arrow { color:var(--muted); }
+    .foot { color: var(--muted); font-size: 12px; margin-top: 8px; }
+    .small { font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Quantum Security CVP – Comparative Analysis (Nokia vs. Peers)</h1>
+      <p class="muted">Business-readable summary with visuals: points of parity/difference, resource-based view, lifecycle alignment, and practical recommendations.</p>
+    </header>
+
+    <section class="panel">
+      <h2>At-a-Glance</h2>
+      <div class="body">
+        <div class="kpis">
+          <div class="kpi">
+            <div class="label">Nokia Differentiation (PoD)</div>
+            <div class="val">42.9%</div>
+            <div class="muted small">vs IBM 76.3%, IDQ 81.2%</div>
+          </div>
+          <div class="kpi">
+            <div class="label">Nokia Parity (PoP)</div>
+            <div class="val">54.8%</div>
+            <div class="muted small">Higher parity than peers</div>
+          </div>
+          <div class="kpi">
+            <div class="label">Nokia RBT Mix</div>
+            <div class="val">Firm 38 • Mkt 26 • Mix 33</div>
+            <div class="muted small">Balanced resource story</div>
+          </div>
+          <div class="kpi">
+            <div class="label">Lifecycle Readiness</div>
+            <div class="val">Assess → Operate</div>
+            <div class="muted small">Migration, orchestration, interop</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="grid" style="margin-top:16px;">
+      <section class="panel">
+        <h2>Comparative View: PoD vs PoP</h2>
+        <div class="body">
+          <div class="legend">
+            <span class="key"><span class="swatch sw-pod"></span> Points of Difference (PoD)</span>
+            <span class="key"><span class="swatch sw-pop"></span> Points of Parity (PoP)</span>
+          </div>
+
+          <div class="rows" role="img" aria-label="Bar comparison of PoD and PoP across Nokia, IBM, ID Quantique">
+            <div class="row">
+              <div class="label">Nokia</div>
+              <div class="bars">
+                <div class="bar" aria-label="Nokia PoD 42.9%">
+                  <span class="fill pod" style="width:42.9%"></span>
+                  <span class="txt">PoD <span>42.9%</span></span>
+                </div>
+                <div class="bar" aria-label="Nokia PoP 54.8%">
+                  <span class="fill pop" style="width:54.8%"></span>
+                  <span class="txt">PoP <span>54.8%</span></span>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="label">IBM</div>
+              <div class="bars">
+                <div class="bar" aria-label="IBM PoD 76.3%">
+                  <span class="fill pod" style="width:76.3%"></span>
+                  <span class="txt">PoD <span>76.3%</span></span>
+                </div>
+                <div class="bar" aria-label="IBM PoP 18.4%">
+                  <span class="fill pop" style="width:18.4%"></span>
+                  <span class="txt">PoP <span>18.4%</span></span>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="label">ID Quantique</div>
+              <div class="bars">
+                <div class="bar" aria-label="IDQ PoD 81.2%">
+                  <span class="fill pod" style="width:81.2%"></span>
+                  <span class="txt">PoD <span>81.2%</span></span>
+                </div>
+                <div class="bar" aria-label="IDQ PoP 16.7%">
+                  <span class="fill pop" style="width:16.7%"></span>
+                  <span class="txt">PoP <span>16.7%</span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p class="foot">Interpretation: Nokia’s story leans parity; competitors emphasize distinctive, defendable advantages.</p>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Nokia Resource Mix (RBT)</h2>
+        <div class="body">
+          <div class="stack" role="img" aria-label="Stacked bar of Nokia firm-based, market-based and mixed resources">
+            <span class="seg firm" style="width:38.1%" title="Firm-based 38.1%"></span>
+            <span class="seg market" style="width:26.2%" title="Market-based 26.2%"></span>
+            <span class="seg mixed" style="width:33.3%" title="Mixed 33.3%"></span>
+          </div>
+          <div class="stack-legend">
+            <span><span class="swatch sw-firm"></span> Firm-based 38.1%</span>
+            <span><span class="swatch sw-market"></span> Market-based 26.2%</span>
+            <span><span class="swatch sw-mixed"></span> Mixed 33.3%</span>
+          </div>
+          <ul class="tight">
+            <li><strong>Firm-based:</strong> telco-grade deployment patterns, ops tooling, services, optical/network integration.</li>
+            <li><strong>Market-based:</strong> partner-friendly posture, ecosystem alignment, standards, channels.</li>
+            <li><strong>Mixed:</strong> lifecycle enablement and interop positioning reduce switching friction.</li>
+          </ul>
+        </div>
+      </section>
+    </div>
+
+    <div class="grid" style="margin-top:16px;">
+      <section class="panel">
+        <h2>Academic CVP Guidance (Layman-Friendly)</h2>
+        <div class="body">
+          <ul class="tight">
+            <li><strong>Value Proposition Innovation:</strong> reshape the offer so customers find it attractive even if new tech has trade‑offs.</li>
+            <li><strong>Pick a focus:</strong> either practical value (cost, reliability, simplicity) or experiential value (brand, performance).</li>
+            <li><strong>Translate features to outcomes:</strong> risk reduction, compliance readiness, and total cost impacts.</li>
+            <li><strong>Disruption tactics:</strong> compensate for weaknesses, amplify unique strengths, and partner to fill gaps.</li>
+            <li><strong>Resource-Based View:</strong> tie company assets and market access to concrete customer benefits.</li>
+            <li><strong>What buyers expect:</strong> clear segmentation, evidence, lifecycle framing, and ecosystem leverage.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Quantum Security CVP Patterns</h2>
+        <div class="body">
+          <ul class="tight">
+            <li><strong>Standards‑anchored PQC:</strong> align to NIST; diversify algorithms to avoid single‑assumption risk.</li>
+            <li><strong>Performance & footprint:</strong> key sizes, latency, and hardware fit drive deployability.</li>
+            <li><strong>Migration enablement:</strong> discovery, inventory, crypto‑agility, automation, policy, and monitoring.</li>
+            <li><strong>Interoperability & ecosystem:</strong> reference architectures for major stacks.</li>
+            <li><strong>Compliance narrative:</strong> auditability, regulatory alignment, and visible roadmap.</li>
+          </ul>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel" style="margin-top:16px;">
+      <h2>Nokia CVP Snapshot</h2>
+      <div class="body">
+        <div class="callouts">
+          <div class="callout">
+            <h3>Strengths</h3>
+            <ul class="tight">
+              <li>Balanced resource story (firm, market, mixed) with telco DNA.</li>
+              <li>Standards alignment (PQC/QKD), vendor‑neutral posture, migration alignment.</li>
+              <li>Lifecycle enablement: discovery/inventory, ops tooling, site‑ready deployment.</li>
+              <li>Ecosystem integration reduces switching friction.</li>
+            </ul>
+          </div>
+          <div class="callout">
+            <h3>Gaps</h3>
+            <ul class="tight">
+              <li>Outcome translation: needs C‑level benefits (risk %, time‑to‑compliance, TCO).</li>
+              <li>Segment specificity: sharper “who/which job‑to‑be‑done”.</li>
+              <li>Proof density: more benchmarks, pilots, quantified comparisons, compliance artifacts.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div style="margin-top:12px;">
+          <span class="pill">PoP: NIST‑aligned PQC, quantum‑safe messaging, partner‑friendly</span>
+          <span class="pill">PoD: network‑grade deployment, lifecycle tooling, managed services potential</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" style="margin-top:16px;">
+      <h2>Competitor Highlights</h2>
+      <div class="body">
+        <div class="callouts">
+          <div class="callout">
+            <h3>IBM</h3>
+            <ul class="tight">
+              <li>High differentiation (~76% PoD) with research pedigree and enterprise‑grade tooling.</li>
+              <li>Evidence‑oriented narratives (accelerators, playbooks, references); strong services.</li>
+              <li>Watch‑out: can feel complex for infra buyers seeking lighter paths.</li>
+            </ul>
+          </div>
+          <div class="callout">
+            <h3>ID Quantique</h3>
+            <ul class="tight">
+              <li>Very high differentiation (~81% PoD) around QKD, RNG, and niche authority.</li>
+              <li>Clear performance/assurance claims; hardware credibility.</li>
+              <li>Watch‑out: component‑led perception vs holistic lifecycle story.</li>
+            </ul>
+          </div>
+          <div class="callout">
+            <h3>Cisco</h3>
+            <ul class="tight">
+              <li>Network‑embedded security narratives and operational manageability.</li>
+              <li>Likely PoP on NIST‑aligned PQC; PoD in device ubiquity and policy rollouts.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" style="margin-top:16px;">
+      <h2>Gap Analysis & Priority Actions (Nokia)</h2>
+      <div class="body">
+        <div class="callouts">
+          <div class="callout">
+            <h3>1) Differentiation Gap (PoD deficit)</h3>
+            <p><strong>What we see:</strong> Messaging leans to parity (standards, general “quantum‑safe” claims) versus distinctive, defendable advantages.</p>
+            <p><strong>Why it matters:</strong> Without explicit PoDs tied to Nokia’s firm‑based resources, buyers can’t see why to choose Nokia over peers with stronger PoD narratives (e.g., IBM, IDQ).</p>
+            <p><strong>What to do next:</strong> Turn assets into measurable outcomes: operator‑scale deployment know‑how, network/optical integration, lifecycle orchestration, and managed service wraps.</p>
+            <ul class="tight">
+              <li><em>Example metrics:</em> migration time reduction (−30–50%), time‑to‑deploy (weeks), SLA uplift (e.g., +0.1–0.3%), quantized‑risk reduction over 12 months.</li>
+            </ul>
+          </div>
+
+          <div class="callout">
+            <h3>2) Outcome Articulation Gap (market‑based underweight)</h3>
+            <p><strong>What we see:</strong> Several entries read as feature lists, not C‑level outcomes.</p>
+            <p><strong>Why it matters:</strong> Academic CVP guidance stresses translating features to benefits (utilitarian/hedonic) and showing business trajectory changes.</p>
+            <p><strong>What to do next:</strong> Attach quantified payoffs to every claim: time‑to‑compliance, HNDL risk avoided, TCO deltas, SLA/latency envelopes for PQC/hybrid modes.</p>
+            <ul class="tight">
+              <li><em>Example metrics:</em> time‑to‑compliance (e.g., NIST/PQC control coverage in ≤90 days), $ exposure avoided, capex/opex deltas per phase, latency overhead bounds (p50/p95).</li>
+            </ul>
+          </div>
+
+          <div class="callout">
+            <h3>3) Narrative Coherence Gap (Value Proposition Innovation)</h3>
+            <p><strong>What we see:</strong> Capabilities are present but the VPI storyline is implicit.</p>
+            <p><strong>Why it matters:</strong> VPI reframes trade‑offs so new tech becomes attractive despite overheads.</p>
+            <p><strong>What to do next:</strong> 
+              <strong>Compensate</strong> for PQC overhead with network‑level mitigations; 
+              <strong>Enhance</strong> resilience via crypto‑agility/orchestration; 
+              <strong>Couple</strong> with partners (cloud, HSM/chip, app vendors) for end‑to‑end migration kits.</p>
+            <ul class="tight">
+              <li><em>Example metrics:</em> throughput retention at target cipher suites, failover time under hybrid modes, rollback success rate in drills.</li>
+            </ul>
+          </div>
+
+          <div class="callout">
+            <h3>4) Segmentation & Use‑Case Gap (who/where/why now)</h3>
+            <p><strong>What we see:</strong> Limited sharpness on target segments and stack locations (optical/transport/5G core/edge/OT) and urgency triggers.</p>
+            <p><strong>Why it matters:</strong> Adoption accelerates when unattended needs are named with evidence.</p>
+            <p><strong>What to do next:</strong> Publish 4–6 verticalized “quantum‑resilient journeys” with stepwise outcomes, controls, and KPIs (e.g., critical infrastructure backhaul, public‑sector PKI, financial inter‑DC).</p>
+            <ul class="tight">
+              <li><em>Example metrics:</em> secrecy‑lifetime mapped to asset inventory, % of tier‑1 circuits on PQC/hybrid, per‑vertical time‑to‑first‑pilot.</li>
+            </ul>
+          </div>
+
+          <div class="callout">
+            <h3>5) Migration & Governance Gap (crypto‑agility as a program)</h3>
+            <p><strong>What we see:</strong> Under‑emphasis on programmatic migration and operational governance.</p>
+            <p><strong>Why it matters:</strong> Buyers procure a de‑risked path, not a feature; playbooks and controls are expected.</p>
+            <p><strong>What to do next:</strong> Codify a phase‑gated blueprint (Assess → Pilot → Dual‑Stack → Cutover → Optimize) with inventories, policy enforcement, keys/certs lifecycle, interop testing, and rollback plans.</p>
+            <ul class="tight">
+              <li><em>Example metrics:</em> % asset discovery coverage, policy conformance, automated rollout ratio, MTTR for crypto incidents, rollback RTO.</li>
+            </ul>
+          </div>
+
+          <div class="callout">
+            <h3>6) Proof & Credibility Gap (evidence chain)</h3>
+            <p><strong>What we see:</strong> Fewer explicit references to benchmarks, pilots, quantified TCO, and compliance artifacts.</p>
+            <p><strong>Why it matters:</strong> High‑stakes security decisions hinge on evidence density and traceability.</p>
+            <p><strong>What to do next:</strong> Attach an “Evidence Annex” to each claim: standards mapping, test reports, pilot KPIs, third‑party attestations, and links to published benchmarks/certifications.</p>
+            <ul class="tight">
+              <li><em>Example metrics:</em> # of third‑party attestations, pilot conversion rate to production, independent benchmark deltas vs. baseline.</li>
+            </ul>
+          </div>
+
+          <div class="callout">
+            <h3>7) Ecosystem & Interoperability Gap</h3>
+            <p><strong>What we see:</strong> Interop and ecosystem economics are not consistently surfaced as PoDs.</p>
+            <p><strong>Why it matters:</strong> In carrier/large‑enterprise contexts, interop lowers switching costs and accelerates adoption.</p>
+            <p><strong>What to do next:</strong> Package “interop as a benefit”: certified permutations, reference topologies, and migration runbooks for mixed‑vendor estates, with quantified time/risk reductions.</p>
+            <ul class="tight">
+              <li><em>Example metrics:</em> # certified permutations, time‑to‑interop in lab, % of mixed‑vendor scenarios covered by runbooks.</li>
+            </ul>
+          </div>
+
+          <div class="callout">
+            <h3>8) Commercial Packaging Gap (sellable units & SLAs)</h3>
+            <p><strong>What we see:</strong> Technical strengths are not consistently translated into offer constructs that map to budgets and accountability.</p>
+            <p><strong>Why it matters:</strong> Clear packages with SLAs and outcome guarantees make the CVP tangible for procurement.</p>
+            <p><strong>What to do next:</strong> Introduce tiered offers (Assess, Accelerate, Assure) with explicit inputs/outputs, service levels, managed services options, and outcome‑based pricing where feasible.</p>
+            <ul class="tight">
+              <li><em>Example metrics:</em> time‑to‑PO, attach rate for managed services, SLA attainment %, outcome bonus/penalty alignment.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" style="margin-top:16px;">
+      <h2>Lifecycle Framing</h2>
+      <div class="body">
+        <div class="flow" role="img" aria-label="Lifecycle: Assess, Pilot, Dual-Stack Hybrid, Cutover, Optimize">
+          <span class="step">Assess</span><span class="arrow">→</span>
+          <span class="step">Pilot</span><span class="arrow">→</span>
+          <span class="step">Dual‑Stack Hybrid</span><span class="arrow">→</span>
+          <span class="step">Cutover</span><span class="arrow">→</span>
+          <span class="step">Optimize</span>
+        </div>
+        <ul class="tight" style="margin-top:8px;">
+          <li><strong>Assess:</strong> discovery, inventory, crypto posture scan.</li>
+          <li><strong>Pilot:</strong> interop testing, policy definition, rollback plans.</li>
+          <li><strong>Dual‑Stack:</strong> hybrid PQC modes with monitoring and SLAs.</li>
+          <li><strong>Cutover:</strong> controlled change, audit trails, compliance checkpoints.</li>
+          <li><strong>Optimize:</strong> posture monitoring, rotation cadence, continuous interop.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="panel" style="margin-top:16px;">
+      <h2>Repositioning Nokia: From Features to Outcomes</h2>
+      <div class="body">
+        <ul class="tight">
+          <li><strong>From “quantum‑safe components” → to “quantum‑resilient program”:</strong> governed, measurable reduction of crypto‑risk over time.</li>
+          <li><strong>From “compliance checkbox” → to “regulatory moat”:</strong> faster attestations and lower audit cost.</li>
+          <li><strong>From “performance overhead” → to “resilience dividend”:</strong> agility and network design improve continuity and response speed.</li>
+          <li><strong>From “one‑off project” → to “lifecycle assurance”:</strong> ongoing posture management with exec‑ready dashboards.</li>
+        </ul>
+      </div>
+    </section>
+
+    <p class="muted small" style="margin-top:16px;">Note: Percentages reflect the provided sheets and may not sum to 100% due to rounding or unclassified items.</p>
+  </div>
+</body>
+</html>

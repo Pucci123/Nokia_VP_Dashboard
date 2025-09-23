@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CVP Extractor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- High-fidelity parsers -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>
+      if (window['pdfjsLib']) {
+        window['pdfjsLib'].GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/dist/mammoth.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.19.3/dist/xlsx.full.min.js"></script>
+  </head>
+  <body class="bg-gray-50">
+    <div id="root"></div>
+    <script type="text/babel">
+      const { useState, useRef } = React;
+
+      const TABS = [
+        'Academic Papers',
+        'Nokia',
+        'Nokia\u2019s Competitors',
+        'Quantum Security',
+      ];
+      const ACCEPT = '.pdf,.docx,.xlsx,.url';
+
+      function App(){
+        return (
+          <main className="w-full max-w-6xl mx-auto px-4 py-6">
+            <h1 className="text-2xl font-semibold text-gray-900 text-center">CVP Extraction</h1>
+            <p className="text-gray-600 text-center mt-1">Upload documents, extract CVPs, download results</p>
+            <CVPTabbedUploader />
+          </main>
+        )
+      }
+
+      function CVPTabbedUploader() {
+        const [active, setActive] = useState(TABS[0]);
+        const [dragging, setDragging] = useState(false);
+        const [filesByTab, setFilesByTab] = useState({});
+        const [pointsByTab, setPointsByTab] = useState({});
+        const [page, setPage] = useState(1);
+        const resultsRef = useRef(null);
+
+        const files = filesByTab[active] || [];
+        const points = pointsByTab[active] || [];
+        const pageSize = 10;
+        const total = points.length;
+        const totalPages = Math.max(1, Math.ceil((total||0) / pageSize));
+        const start = (page - 1) * pageSize;
+        const pageRows = points.slice(start, start + pageSize);
+
+        const setFilesForActive = (list) => setFilesByTab((p) => ({ ...p, [active]: list }));
+        const setPointsForActive = (list) => setPointsByTab((p) => ({ ...p, [active]: list }));
+
+        const addFiles = (list) => {
+          if (!list) return;
+          const next = Array.from(list).filter((f) => ACCEPT.split(',').some(ext => f.name.toLowerCase().endsWith(ext)));
+          if (!next.length) return;
+          setFilesForActive([...(files||[]), ...next]);
+        };
+
+        const onChange = (e) => { addFiles(e.target.files); e.currentTarget.value=''; };
+        const onDrop = (e) => { e.preventDefault(); e.stopPropagation(); setDragging(false); addFiles(e.dataTransfer.files); };
+        const onDragOver = (e) => { e.preventDefault(); e.stopPropagation(); setDragging(true); };
+        const onDragLeave = (e) => { e.preventDefault(); e.stopPropagation(); setDragging(false); };
+
+        const clearAll = () => { setFilesForActive([]); setPointsForActive([]); setPage(1); };
+
+        const extract = async () => {
+          if (!files.length) { setPointsForActive([]); return; }
+          const results = [];
+          for (const f of files) {
+            let fileMatched = false;
+            try {
+              const parts = await fileToMarkdownUnits(f);
+              const full = parts.map(p => p.text).join('\n\n');
+              const md = toMarkdown(`# ${f.name}\n\n${full}`);
+              const paras = md.split(/\n{2,}/).map(p=>p.trim()).filter(Boolean);
+              for (let i=0;i<paras.length;i++){
+                const p = paras[i];
+                if (isReferencesHeading(p)) break;
+                if (isCVP(p) && isQuantumRelevant(p)) {
+                  let paragraph = mergeWithNeighbors(paras, i);
+                  paragraph = summarizeIfLong(paragraph);
+                  results.push({ text: paragraph, source: f.name, page: '' });
+                  fileMatched = true;
+                }
+              }
+            } catch {}
+            if (!fileMatched) {
+              results.push({ text: 'Not Met Criteria', source: f.name, page: 'N/A' });
+            }
+          }
+          setPointsForActive(dedupeByText(results));
+          setPage(1);
+          setTimeout(()=>{ try{resultsRef.current?.scrollIntoView({behavior:'smooth', block:'start'});}catch(e){} },50);
+        };
+
+        return (
+          <section className="mt-6">
+            {/* Tabs */}
+            <nav className="w-full flex flex-wrap gap-2 md:gap-3">
+              {TABS.map((label) => {
+                const isActive = active === label;
+                return (
+                  <button key={label} type="button" onClick={()=>{ setActive(label); setPage(1); }}
+                          className={[ 'px-3 py-2 text-sm md:text-base rounded-md border-2 transition-colors', isActive ? 'border-blue-500 text-gray-900 font-semibold' : 'border-transparent text-gray-600 hover:border-gray-300', ].join(' ')} aria-pressed={isActive}>{label}</button>
+                );
+              })}
+            </nav>
+
+            {/* Title */}
+            <h2 className="mt-6 text-2xl font-semibold text-gray-900 text-center">{active}</h2>
+
+            {/* Dropzone */}
+            <label htmlFor="cvp-upload-input" onDrop={onDrop} onDragOver={onDragOver} onDragLeave={onDragLeave}
+                   className={[ 'mt-4 block w-full max-w-3xl mx-auto', 'h-48 p-6', 'border-2 border-dashed rounded-xl', dragging ? 'border-blue-500' : 'border-gray-300', 'bg-gray-50 hover:bg-gray-100', 'text-center cursor-pointer select-none transition-colors', ].join(' ')}
+                   aria-label="Upload .pdf, .docx, .xlsx, .url files">
+              <p className="text-gray-600">Drag & drop files here or click to upload</p>
+              <p className="mt-1 text-xs text-gray-500">Accepted: {ACCEPT}</p>
+              <input id="cvp-upload-input" type="file" className="hidden" multiple accept={ACCEPT} onChange={onChange} />
+            </label>
+
+            {/* Buttons */}
+            <div className="mt-4 w-full max-w-3xl mx-auto flex items-center justify-center gap-3">
+              <button type="button" onClick={extract} className="px-4 py-2 rounded-md border border-gray-400 hover:bg-gray-100 text-gray-800">Extract</button>
+              <button type="button" onClick={()=>downloadTxt(points)} disabled={!points.length} className={[ 'px-4 py-2 rounded-md border border-gray-400 hover:bg-gray-100 text-gray-800', !points.length ? 'opacity-50 cursor-not-allowed':'' ].join(' ')}>
+                Download TXT
+              </button>
+              <button type="button" onClick={()=>downloadCsv(points)} disabled={!points.length} className={[ 'px-4 py-2 rounded-md border border-gray-400 hover:bg-gray-100 text-gray-800', !points.length ? 'opacity-50 cursor-not-allowed':'' ].join(' ')}>
+                Download CSV
+              </button>
+              <button type="button" onClick={clearAll} className="px-4 py-2 rounded-md border border-gray-400 hover:bg-gray-100 text-gray-800">Clear</button>
+            </div>
+
+            {/* Files */}
+            {files.length>0 && (
+              <ul className="mt-4 list-disc list-inside text-sm text-gray-700 w-full max-w-3xl mx-auto">
+                {files.map((f,i)=> <li key={`${f.name}-${i}`} className="break-words">{f.name}</li>)}
+              </ul>
+            )}
+
+            {/* Results */}
+            <section ref={resultsRef} className="mt-6 w-full max-w-5xl mx-auto">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <h3 className="text-lg font-semibold text-gray-900">Extraction Results</h3>
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={()=>copyRows(pageRows)} disabled={!pageRows.length} className={[ 'px-3 py-1.5 rounded-md border border-gray-400 hover:bg-gray-100 text-gray-800 text-sm', !pageRows.length?'opacity-50 cursor-not-allowed':'' ].join(' ')}>Copy</button>
+                  <div className="flex items-center gap-2">
+                    <button type="button" disabled={page<=1} onClick={()=>setPage(p=>Math.max(1,p-1))} className={[ 'px-3 py-1.5 rounded-md border border-gray-400 hover:bg-gray-100 text-gray-800 text-sm', page<=1?'opacity-50 cursor-not-allowed':'' ].join(' ')}>Prev</button>
+                    <span className="text-sm text-gray-600">Page {page} / {totalPages}</span>
+                    <button type="button" disabled={page>=totalPages} onClick={()=>setPage(p=>Math.min(totalPages,p+1))} className={[ 'px-3 py-1.5 rounded-md border border-gray-400 hover:bg-gray-100 text-gray-800 text-sm', page>=totalPages?'opacity-50 cursor-not-allowed':'' ].join(' ')}>Next</button>
+                  </div>
+                </div>
+              </div>
+              {!points.length ? (
+                <div className="text-sm text-gray-500 border border-gray-200 rounded-md p-4 bg-white">No results yet. Upload files and click <span className="font-medium">Extract</span>.</div>
+              ) : (
+                <div className="bg-white border border-gray-200 rounded-md p-4 max-h-96 overflow-y-auto">
+                  <ul className="list-disc list-inside text-sm text-gray-800 space-y-2">
+                    {pageRows.map((r,i)=> (
+                      <li key={i} className="leading-relaxed">
+                        {r.text}
+                        <div className="text-xs text-gray-500 mt-1">{r.source}{r.page? ` • p. ${r.page}`:''}</div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </section>
+          </section>
+        );
+      }
+
+      // ---------- Parsing & Extraction (best-effort, client-side) ----------
+      async function fileToMarkdownUnits(file){
+        const ext = (file.name.split('.').pop()||'').toLowerCase();
+        if (ext === 'url') {
+          const t = await file.text();
+          const m = t.match(/URL=(.+)/i);
+          const url = (m ? m[1] : t).trim();
+          return [{ text:`# ${file.name}\n\nSource URL: ${url}`, page:null }];
+        }
+        if (ext === 'pdf') {
+          // Try local server using pdfplumber first
+          try {
+            const fd = new FormData();
+            fd.append('file', file);
+            const res = await fetch('http://localhost:5000/extract/pdf', { method: 'POST', body: fd });
+            if (res.ok) {
+              const data = await res.json();
+              if (data && Array.isArray(data.pages) && data.pages.length) {
+                return data.pages.map(p => ({ text: `# ${file.name}\n\n${p.text || ''}`, page: p.page || null }));
+              }
+            }
+          } catch (e) { /* fallback to pdf.js below */ }
+          try {
+            if (window.pdfjsLib) {
+              const ab = await file.arrayBuffer();
+              const task = window.pdfjsLib.getDocument({ data: ab });
+              const pdf = await task.promise;
+              const results = [];
+              for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                const page = await pdf.getPage(pageNum);
+                const content = await page.getTextContent();
+                const raw = content.items.map((it)=> it.str || '').join(' ');
+                const text = raw.replace(/[\t\r]+/g,' ').replace(/\s{2,}/g,' ').replace(/([.!?])\s+/g,'$1\n').trim();
+                if (text) results.push({ text: `# ${file.name}\n\n${text}`, page: pageNum });
+              }
+              if (results.length) return results;
+            }
+          } catch (e) { console.warn('pdf.js failed, fallback', e); }
+          const ab = await file.arrayBuffer();
+          const text = extractPrintableText(new Uint8Array(ab));
+          const seg = segmentByPages(text);
+          if (seg.length) return seg.map((t,i)=> ({ text:`# ${file.name}\n\n${t}`, page:i+1 }));
+          return [{ text:`# ${file.name}\n\n${text}`, page:null }];
+        }
+        if (ext === 'docx') {
+          try {
+            if (window.mammoth && window.mammoth.convertToHtml) {
+              const ab = await file.arrayBuffer();
+              const res = await window.mammoth.convertToHtml({ arrayBuffer: ab });
+              const html = res.value || '';
+              const text = htmlToPlainText(html);
+              return [{ text: `# ${file.name}\n\n${text}`, page:null }];
+            }
+          } catch (e) { console.warn('mammoth failed, fallback', e); }
+          const ab = await file.arrayBuffer();
+          const text = extractPrintableText(new Uint8Array(ab));
+          return [{ text:`# ${file.name}\n\n${text}`, page:null }];
+        }
+        if (ext === 'xlsx') {
+          try {
+            if (window.XLSX) {
+              const ab = await file.arrayBuffer();
+              const wb = window.XLSX.read(ab, { type: 'array' });
+              const out = [];
+              wb.SheetNames.forEach((name)=>{
+                const ws = wb.Sheets[name];
+                if (!ws) return;
+                const csv = window.XLSX.utils.sheet_to_csv(ws, { blankrows:false });
+                const text = `Sheet: ${name}\n\n${csv}`;
+                out.push({ text: `# ${file.name}\n\n${text}`, page:null });
+              });
+              if (out.length) return out;
+            }
+          } catch (e) { console.warn('xlsx failed, fallback', e); }
+          const ab = await file.arrayBuffer();
+          const text = extractPrintableText(new Uint8Array(ab));
+          return [{ text:`# ${file.name}\n\n${text}`, page:null }];
+        }
+        // Fallback generic
+        const ab = await file.arrayBuffer();
+        const text = extractPrintableText(new Uint8Array(ab));
+        return [{ text:`# ${file.name}\n\n${text}`, page:null }];
+      }
+      function extractPrintableText(bytes){ let out=''; let run=[]; const flush=()=>{ if(!run.length)return; try{ const s=new TextDecoder('utf-8',{fatal:false}).decode(new Uint8Array(run)); if(/\w/.test(s)) out+=s+' '; }catch{} run=[]; }; for(let i=0;i<bytes.length;i++){ const b=bytes[i]; const printable=(b>=32&&b<=126)||b>=160; if(printable) run.push(b); else flush(); } flush(); return out.replace(/[\r\t]+/g,' ').replace(/\s{2,}/g,' ').replace(/([.!?])\s+/g,'$1\n').trim(); }
+      function segmentByPages(text){ return text.split(/\f|\n\s*-{5,}\s*\n/g).filter(Boolean); }
+      function toMarkdown(text){ return `\`\`\`\n${text}\n\`\`\``; }
+      function hasDeliveryPhrase(s){ return /\b(by|through|via|using)\b\s+\S+/i.test(s); }
+      function isReferencesHeading(s){ return /^references\b|^bibliography\b|^works\s+cited\b/i.test(s.trim()); }
+      function mergeWithNeighbors(paras, i){ const cur=paras[i].trim(); const prev=i>0?paras[i-1].trim():''; const next=i<paras.length-1?paras[i+1].trim():''; let out=cur; if(cur.length<200 && next && next.length<600) out=cur+'\n\n'+next; if(out.length<200 && prev && prev.length<600 && !isReferencesHeading(prev)) out=prev+'\n\n'+out; return out; }
+      function summarizeIfLong(text){ const words=text.split(/\s+/); if(words.length<=100) return text; const sents=text.match(/[^.!?]+[.!?]+(?:\s|$)/g)||[text]; let acc=[], n=0; for(const s of sents){ const wc=s.trim().split(/\s+/).length; if(n+wc>100) break; acc.push(s.trim()); n+=wc;} if(!acc.length) return words.slice(0,100).join(' ')+'...'; return acc.join(' ').trim(); }
+      function isQuantumRelevant(s){ const t=s.toLowerCase(); return /(quantum|post-quantum|pq\b|pqc|qkd|shor|grover|lattice|ring-lwe|code-based|multivariate|isogeny|nist\s*post\s*quantum|kyber|sphincs|dilithium|falcon|bike|hqc|mceliece|qresistant|quantum-safe|quantum security)/.test(t); }
+      function htmlToPlainText(html){
+        const tmp = document.createElement('div');
+        tmp.innerHTML = html;
+        tmp.querySelectorAll('script,style,nav,footer,header,aside,form').forEach(el=>el.remove());
+        const walker = document.createTreeWalker(tmp, NodeFilter.SHOW_TEXT, null);
+        let out='';
+        while (walker.nextNode()){
+          const s = walker.currentNode.nodeValue.replace(/[\s\u00A0]+/g,' ').trim();
+          if (s) out += (out? ' ':'') + s;
+        }
+        return out.replace(/[\t\r]+/g,' ').replace(/\s{2,}/g,' ').replace(/([.!?])\s+/g,'$1\n').trim();
+      }
+      function splitIntoUnits(text){ if(!text) return []; const cleaned=text.replace(/[\u00AD\u200B\u200C\u200D]/g,'').replace(/\n\s*-{2,}\s*\n/g,'\n').replace(/\n?\s*Page\s+\d+(\s+of\s+\d+)?\s*\n/gi,'\n').replace(/[ \t\r]+/g,' ').replace(/\s{2,}/g,' ').trim(); const paras=cleaned.split(/\n{2,}/).map(p=>p.trim()).filter(Boolean); const units=[]; for(const p of paras){ const sentences = p.length>160 ? (p.match(/[^.!?]+[.!?]+(\s+|$)/g) || [p]) : [p]; for(const s of sentences){ const st=s.trim(); if(preFilter(st)) units.push(st); }} return units; }
+      function alphaRatio(s){ const letters=(s.match(/[A-Za-z]/g)||[]).length; return letters/Math.max(s.length,1); }
+      function looksLikeGibberish(s){ const ratio=alphaRatio(s); if(ratio<0.5) return true; const singles=(s.match(/\b[A-Za-z]\b/g)||[]).length; if(singles>=8) return true; return false; }
+      // Strengthen preFilter with metadata/gibberish rejection
+      (function(){
+        const _pre = preFilter;
+        preFilter = function(s){
+          const t = s.trim();
+          if(!_pre(t)) return false;
+          if (/(endstream|endobj|\bobj\b\s+\d+|\/Length|\/Filter|\/FlateDecode|\/XObject|\/Subtype|\/Contents|\bstream\b)/i.test(t)) return false;
+          if (/(rdf:|dc:|xmp:|pdfx:|xmlns:|<[^>]+>)/i.test(t)) return false;
+          const letters=(t.match(/[A-Za-z]/g)||[]).length; const vowels=(t.match(/[AEIOUaeiou]/g)||[]).length; if(letters>=10 && vowels/letters<0.25) return false;
+          if(looksLikeGibberish(t)) return false;
+          return true;
+        };
+      })();
+      function alphaRatio(s){ const letters=(s.match(/[A-Za-z]/g)||[]).length; return letters/Math.max(s.length,1); }
+      function looksLikeGibberish(s){ const ratio=alphaRatio(s); if(ratio<0.5) return true; const singles=(s.match(/\b[A-Za-z]\b/g)||[]).length; if(singles>=8) return true; return false; }
+      (function(){ const _pre=preFilter; preFilter=function(s){ if(!_pre(s)) return false; if(looksLikeGibberish(s)) return false; return true; }; })();
+      function preFilter(s){ const t=s.trim(); if(!t) return false; const len=t.length; const words=t.split(/\s+/).length; if(len<50||len>500) return false; if(words<8) return false; if((t.match(/[;,]/g)||[]).length>=4) return false; if(/^figure\b|^table\b|^appendix\b|^references\b/i.test(t)) return false; if(/copyright|cookie|privacy|terms|subscribe|login|table of contents/i.test(t)) return false; const tokens=t.split(/\s+/); const numish=tokens.filter(x=>/[\d%$]/.test(x)).length; if(numish/tokens.length>0.5) return false; return true; }
+      function dedupeByText(items){ const seen=new Set(); const out=[]; for(const it of items){ const k=(it.text||'').toLowerCase(); if(!seen.has(k)){ seen.add(k); out.push(it);} } return out; }
+
+      // Criteria lexicon
+      const LEX = {
+        benefitsCosts:['benefit','benefits','value','outcome','outcomes','improve','enhance','optimize','save time','save cost','reduce cost','lower cost','cost savings','efficiency','effectiveness','reliability','trust','security','scalable','performance','usability','experience','roi','return on investment','total cost of ownership','tco'],
+        costsOnly:['price','cost','risk','time-to-market','maintenance','operational cost','capex','opex'],
+        differentiation:['differentiate','differentiated','unique','only','unmatched','best-in-class','competitive advantage','distinctive','proprietary','patented','one-of-a-kind','superior'],
+        competitors:['vs competitor','than competitors','compared to','benchmark','market leader','leaders','alternative','alternatives'],
+        valueFunctional:['functional','performance','availability','reliability','scalability','latency','throughput','interoperability','compliance','security','privacy'],
+        valueExperiential:['experiential','experience','ease of use','usability','design','aesthetics','brand','support','service','customer success','onboarding'],
+        lifecycle:['before use','pre-sale','onboarding','during use','in-use','after use','post-sale','renewal','adoption','retention','customer journey','lifecycle','co-create','co-created','co-creation'],
+        resourceSharing:['partner','partners','alliance','alliances','ecosystem','integration with','joint','co-innovate','co-develop','collaborat','api','platform partnership'],
+        configuration:['configure','configured','configuration','orchestrate','orchestration','bundle','bundled','solutioning','process','processes','operating model','capability','capabilities','resource','resources','platform','architecture','framework'],
+        designSegment:['for enterprises','for smb','for consumers','for operators','for manufacturers','segment','vertical','for banks','for healthcare','for government','for telco','for education','for retail','target customers','customer segment','persona'],
+        strategic:['strategy','strategic','vision','positioning','competitive strategy','roadmap','objectives','market positioning'],
+        actionable:['deliver','delivery','implemented','implementation','deploy','deployment','process','framework','model','how we','how it is delivered','via','through','by '],
+        quantifiable:['%',' roi','kpi','metric','increase','decrease','reduce','improve by','savings','minutes','hours','days','x faster','x cheaper'],
+        vagueStop:['maybe','might','could','various','several','nice','world-class','cutting-edge','best practice']
+      };
+      function countHits(t, words){ const lower=t.toLowerCase(); return words.reduce((a,w)=> lower.includes(w)? a+1 : a, 0); }
+      function matchCriteria(text){ const t=text.toLowerCase(); const c={
+        benefitsCosts:countHits(t,LEX.benefitsCosts)+countHits(t,LEX.costsOnly)>0,
+        differentiation:countHits(t,LEX.differentiation)+countHits(t,LEX.competitors)>0,
+        valueElements:countHits(t,LEX.valueFunctional)>0||countHits(t,LEX.valueExperiential)>0,
+        lifecycle:countHits(t,LEX.lifecycle)>0,
+        resourceSharing:countHits(t,LEX.resourceSharing)>0,
+        configuration:countHits(t,LEX.configuration)>0,
+        designSegment:countHits(t,LEX.designSegment)>0,
+        strategic:countHits(t,LEX.strategic)>0,
+        actionable:countHits(t,LEX.actionable)>0,
+        quantifiable:countHits(t,LEX.quantifiable)>0,
+        clearComm: countHits(t,LEX.vagueStop)===0
+      }; const hasVPWord=/\b(cvps?|value\s+proposition(s)?)\b/i.test(t); const valueBoth=countHits(t,LEX.valueFunctional)>0 && countHits(t,LEX.valueExperiential)>0; const countAny=Object.entries(c).filter(([k,v])=>k!=='clearComm' && v).length; return { ...c, hasVPWord, valueBoth, countAny}; }
+      function isCVP(text){ if(!preFilter(text)) return false; const c=matchCriteria(text); // At least one criterion and clearly communicated
+        if (!c.clearComm) return false; return c.countAny>=1; }
+      function extractDeliveryPhrase(s){ const t=s.replace(/\s+/g,' ').trim(); const m=t.match(/\b(by|through|via|using)\b(.+?)(\.|;|$)/i); if(m) return m[1].toLowerCase()+m[2]; return t.length>220? t.slice(0,200)+'…' : t; }
+      function toBulletPoint(item){ const m=matchCriteria(item.text); let summary=''; let reasonParts=[]; // Build summary
+        if(m.benefitsCosts) summary='Delivers customer benefits and manages costs '+extractDeliveryPhrase(item.text);
+        else if(m.differentiation) summary='Differentiates the offer '+extractDeliveryPhrase(item.text);
+        else if(m.valueBoth || m.valueElements) summary='Provides functional and/or experiential value '+extractDeliveryPhrase(item.text);
+        else if(m.lifecycle) summary='Improves customer experience across the lifecycle '+extractDeliveryPhrase(item.text);
+        else if(m.resourceSharing) summary='Co-creates value with partners '+extractDeliveryPhrase(item.text);
+        else if(m.configuration) summary='Configures resources and practices to deliver value '+extractDeliveryPhrase(item.text);
+        else if(m.designSegment) summary='Tailors design to target segments '+extractDeliveryPhrase(item.text);
+        else if(m.strategic) summary='Strategically aligned value delivery '+extractDeliveryPhrase(item.text);
+        else if(m.actionable) summary='Actionable value delivery mechanism '+extractDeliveryPhrase(item.text);
+        else if(m.quantifiable) summary='Quantifiable value improvement '+extractDeliveryPhrase(item.text);
+        // Build reason (why it meets criteria)
+        if(m.benefitsCosts) reasonParts.push('Addresses customer benefits and cost trade-offs');
+        if(m.differentiation) reasonParts.push('Shows clear competitive differentiation');
+        if(m.valueBoth||m.valueElements) reasonParts.push('Articulates functional and/or experiential value');
+        if(m.lifecycle) reasonParts.push('References the customer lifecycle');
+        if(m.resourceSharing) reasonParts.push('Involves partner/resource integration');
+        if(m.configuration) reasonParts.push('Explains configuration of resources/practices');
+        if(m.designSegment) reasonParts.push('Tailored to specific segments');
+        if(m.strategic) reasonParts.push('Strategically grounded');
+        if(m.actionable) reasonParts.push('Specific and actionable');
+        if(m.quantifiable) reasonParts.push('Quantifiable/measurable impact');
+        if(m.clearComm) reasonParts.push('Clearly communicated');
+        const reason = reasonParts.join('; ');
+        return { summary, reason, source:item.source, page:item.page };
+      }
+      function downloadTxt(points){ if(!points||!points.length) return; const lines=points.map(p=>`• ${p.summary} — ${p.reason} [${p.source}${p.page? ', p.'+p.page:''}]`); const blob=new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8;'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='cvp_extraction.txt'; a.click(); URL.revokeObjectURL(url); }
+      function downloadCsv(points){ if(!points||!points.length) return; const header=['Summary','Reason','Source','Page']; const csv=[header].concat(points.map(p=>[p.summary,p.reason,p.source,p.page||''].map(x=>`"${String(x||'').replace(/"/g,'""')}"`).join(','))).join('\n'); const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='cvp_extraction.csv'; a.click(); URL.revokeObjectURL(url); }
+      function copyRows(rows){ if(!rows||!rows.length) return; const text=rows.map(p=>`${p.summary} — ${p.reason} [${p.source}${p.page? ', p.'+p.page:''}]`).join('\n'); navigator.clipboard?.writeText(text).catch(()=>{}); }
+      function downloadTxt(points){ if(!points||!points.length) return; const lines=points.map(p=>`• ${p.element} — ${p.why} [${p.source}${p.page? ' p. '+p.page:''}]`); const blob=new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8;'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='cvp_extraction.txt'; a.click(); URL.revokeObjectURL(url); }
+      function downloadCsv(points){ if(!points||!points.length) return; const header=['Element','Why','Source','Page']; const csv=[header].concat(points.map(p=>[p.element,p.why,p.source,p.page||''].map(x=>`"${String(x||'').replace(/"/g,'""')}"`).join(','))).join('\n'); const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='cvp_extraction.csv'; a.click(); URL.revokeObjectURL(url); }
+      function copyRows(rows){ if(!rows||!rows.length) return; const text=rows.map(p=>`${p.element} — ${p.why} [${p.source}${p.page? ' p. '+p.page:''}]`).join('\n'); navigator.clipboard?.writeText(text).catch(()=>{}); }
+
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<App />);
+    </script>
+  </body>
+  </html>

@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quantum Security CVP Visual</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --bg: #f5f7fb;
+        --panel: #ffffff;
+        --panel-2: #ffffff;
+        --text: #111827;
+        --muted: #6b7280;
+        --primary: #2563eb;
+        --accent: #0ea5e9;
+        --border: #e5e7eb;
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+        color: var(--text);
+        background: var(--bg);
+      }
+      .container { max-width: 1200px; margin: 0 auto; padding: 28px; }
+      header { padding: 10px 0 18px; }
+      h1 { font-size: 28px; margin: 0; font-weight: 700; letter-spacing: 0.2px; }
+      .sub { color: var(--muted); margin-top: 6px; }
+      .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 6px 18px rgba(17, 24, 39, 0.06); }
+      .pad { padding: 16px; }
+      .grid { display:grid; grid-template-columns: 1.4fr 1fr; gap:16px; }
+      @media (max-width: 1024px) { .grid { grid-template-columns: 1fr; } }
+      .toolbar { display:flex; align-items:center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+      .left, .right { display:flex; align-items:center; gap: 8px; flex-wrap: wrap; }
+      .btn { background:#ffffff; color:var(--text); border:1px solid var(--border); padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:500; }
+      .btn:hover { background:#f3f4f6; }
+      .btn.primary { background: linear-gradient(180deg, #3b82f6, #2563eb); color: #fff; border-color:#1d4ed8; }
+      .select, .input { background:#ffffff; color:var(--text); border:1px solid var(--border); padding:8px 12px; border-radius:10px; }
+      .badge { display:inline-block; padding:2px 8px; border-radius: 999px; border:1px solid var(--border); background:#f3f4f6; color: #374151; font-size:12px; }
+      .cards { display:grid; grid-template-columns: repeat(2, 1fr); gap:12px; }
+      @media (max-width: 900px) { .cards { grid-template-columns: 1fr; } }
+      .card { border:1px solid var(--border); background: var(--panel-2); border-radius:12px; padding:14px; }
+      .card h3 { margin:0 0 6px; font-size:16px; }
+      canvas { width: 100% !important; height: 420px !important; background: #ffffff; }
+      ul { margin: 0; padding-left: 16px; }
+      li { line-height: 1.5; }
+      .hint { color: var(--muted); font-size: 12px; }
+      .foot { color: var(--muted); font-size: 12px; margin-top: 14px; text-align:center; }
+      .chk { display:flex; gap:8px; align-items:center; padding:6px 10px; border-radius:10px; border:1px solid var(--border); background:#ffffff; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+      textarea { width:100%; min-height: 160px; resize: vertical; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Quantum Security CVP — Visual Summary</h1>
+        <div class="sub">Academic framing, Nokia vs. competitors, gaps, and recommendations</div>
+      </header>
+
+      <!-- Perplexity Visuals heading -->
+      <div class="toolbar" style="margin-top:8px"><span class="badge">Perplexity — Visuals</span></div>
+
+      <section class="grid">
+        <div class="panel pad">
+          <div class="toolbar">
+            <div class="left">
+              <span class="badge">Radar: Capability by Dimension</span>
+            </div>
+            <div class="right" id="entityToggles"></div>
+          </div>
+          <canvas id="radar"></canvas>
+        </div>
+        <div class="panel pad">
+          <div class="toolbar">
+            <div class="left">
+              <span class="badge">Grouped: PoP vs PoD Emphasis</span>
+            </div>
+            <div class="right">
+              <button id="editData" class="btn">Edit Data</button>
+              <button id="applyData" class="btn primary" style="display:none">Apply</button>
+              <button id="exportRadar" class="btn">Export Radar PNG</button>
+              <button id="exportBars" class="btn">Export Bars PNG</button>
+            </div>
+          </div>
+          <canvas id="bars"></canvas>
+          <div id="editorWrap" class="panel pad" style="margin-top:10px; display:none">
+            <div class="hint" style="margin-bottom:6px">Edit JSON below and click Apply. Scores are qualitative, inferred from your summary — adjust as needed (1–5).</div>
+            <textarea id="editor" class="input mono"></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- Perplexity Summary cards -->
+      <div class="toolbar" style="margin-top:16px"><span class="badge">Perplexity — Summary</span></div>
+      <section class="cards">
+        <div class="card">
+          <h3>Academic CVP Summary</h3>
+          <ul>
+            <li>Clear user value, segments, measurable financials</li>
+            <li>Co-creation, iterative development, value-in-use</li>
+            <li>Multi-dimensional value; evidence-backed, adaptable</li>
+            <li>Security depth, hybrid approaches, standards (NIST PQC)</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Nokia CVP Summary</h3>
+          <ul>
+            <li>Defense-in-depth: classical, physics-based, PQC</li>
+            <li>Hybrid KEMs, key rotation, RNGs, HSM/TPM</li>
+            <li>Standards-led (NIST/IETF/3GPP/ITU‑T), orchestration (1830 SMS)</li>
+            <li>Gaps: quantified financial impact, user-centric narratives</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Competitor CVP Summary</h3>
+          <ul>
+            <li>IBM: cryptographic agility and migration tooling</li>
+            <li>ID Quantique: mature QKD/QRNG, practical usability</li>
+            <li>Cisco: PQC + hardware trust anchors, ecosystem leadership</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Comparative Takeaways</h3>
+          <ul>
+            <li>Nokia PoP strong; PoD in research, platform orchestration</li>
+            <li>Competitors emphasize agility, usability, hardware anchors</li>
+            <li>Improve business outcomes messaging and co-creation</li>
+          </ul>
+        </div>
+      </section>
+
+      <section style="margin-top:16px" class="panel pad">
+        <div class="toolbar"><span class="badge">Perplexity — Gap Analysis & Recommendations</span></div>
+        <div class="cards">
+          <div class="card">
+            <h3>Articulate Business Impact</h3>
+            <ul>
+              <li>Quantify risk reduction and cost savings</li>
+              <li>Tie to continuity, compliance, and growth</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Elevate Co‑Creation</h3>
+            <ul>
+              <li>Involve customers across the journey</li>
+              <li>Iterate on value‑in‑use and outcomes</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Clarify Integration</h3>
+            <ul>
+              <li>Show deployment ease and agility</li>
+              <li>Emphasize rapid crypto transitions</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Leverage Ecosystem</h3>
+            <ul>
+              <li>Extend partnerships and joint trials</li>
+              <li>Showcase Bell Labs leadership</li>
+            </ul>
+          </div>
+        </div>
+        <div class="foot">Based on your Perplexity summary; adjust data using “Edit Data”.</div>
+      </section>
+
+      
+      
+
+      <!-- ChatGPT-derived narrative section -->
+      <section style="margin-top:16px" class="panel pad">
+        <div class="toolbar"><span class="badge">ChatGPT — Narrative Summary</span></div>
+        <div class="cards">
+          <div class="card">
+            <h3>Academic CVP — What “Good” Looks Like</h3>
+            <ul>
+              <li>Value Proposition Innovation (VPI): re-compose CVP to offset initial inferiority</li>
+              <li>Pick utilitarian or hedonic focus per segment — avoid ambiguity</li>
+              <li>Translate features → outcomes: risk, compliance, OPEX/CAPEX, time-to-deploy</li>
+              <li>Tactics: compensate weaknesses, stress novel strengths, partner ecosystems, target JTBD</li>
+              <li>RBT: link firm- and market-based resources to benefits</li>
+            </ul>
+            <div class="hint" style="margin-top:6px">Common expectations: clear segments; evidence/pilots; lifecycle framing; ecosystem leverage.</div>
+          </div>
+          <div class="card">
+            <h3>Quantum Security CVP — Industry Patterns</h3>
+            <ul>
+              <li>NIST-anchored PQC; diversify crypto assumptions</li>
+              <li>Performance/footprint pragmatics for real deployments</li>
+              <li>Migration enablement: discovery, inventory, agility, tooling, monitoring</li>
+              <li>Interoperability with major stacks; vendor ecosystem</li>
+              <li>Compliance/readiness narrative and auditability</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Nokia CVP — Highlights</h3>
+            <ul>
+              <li>Balance of PoP vs PoD (≈23 PoP, ≈18 PoD across 42 items)</li>
+              <li>RBT breadth: Firm (≈16), Market (≈11), Mixed (≈14)</li>
+              <li>PoP: standards-aligned PQC/QKD; vendor-neutral; migration-ready</li>
+              <li>PoD: lifecycle enablement, network-grade ops/tooling, site-ready services</li>
+              <li>Ecosystem & integration reduce switching friction</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Nokia — Gaps to Address</h3>
+            <ul>
+              <li>Outcome translation to C-level metrics and timelines</li>
+              <li>Sharper segment specificity and JTBD articulation</li>
+              <li>More explicit evidence: benchmarks, pilots, TCO, compliance artifacts</li>
+              <li>Clarify PoP vs PoD framing across offers</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="cards" style="margin-top:12px">
+          <div class="card">
+            <h3>Competitor — IBM</h3>
+            <ul>
+              <li>PoD heavy (~29 PoD vs ~7 PoP); strong firm-based resources</li>
+              <li>Enterprise migrations: accelerators, services, outcomes language</li>
+              <li>Potential risk: complexity/toolchain sprawl for lighter buyers</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Competitor — ID Quantique</h3>
+            <ul>
+              <li>~39 PoD vs ~8 PoP; QKD specialization and QRNG credibility</li>
+              <li>Deep niche authority; specific performance/assurance claims</li>
+              <li>Potential gap: narrower portfolio; component-led perception</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Competitor — Cisco</h3>
+            <ul>
+              <li>Network-embedded security, platform integrations, manageability</li>
+              <li>PoP: NIST-aligned posture; PoD: device ubiquity and policy rollouts</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Comparative Evaluation</h3>
+            <ul>
+              <li>Nokia aligns with lifecycle orientation and ecosystem integration</li>
+              <li>Standards & crypto-agility keep baseline credibility (PoP)</li>
+              <li>Network-grade deployment is a PoD if tied to outcomes</li>
+              <li>Competitors: IBM excels at services/accelerators and explicit outcomes</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ChatGPT Gap Analysis & Recommendations -->
+      <section style="margin-top:16px" class="panel pad">
+        <div class="toolbar"><span class="badge">ChatGPT — Gap Analysis & Recommendations</span></div>
+        <div class="cards">
+          <div class="card">
+            <h3>1) Differentiation Gap (PoD deficit)</h3>
+            <ul>
+              <li>See: Emphasis on parity; fewer explicit PoDs than peers</li>
+              <li>Matter: Under-leverages firm assets and co-created outcomes</li>
+              <li>Do: Turn operator-scale deployment, network/optical expertise, lifecycle orchestration, and service wrap into quantified PoDs</li>
+              <li class="hint">KPI cues: migration lead-time ↓, risk score ↓, SLA ↑</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>2) Outcome Articulation Gap</h3>
+            <ul>
+              <li>See: Market-based outcomes lighter vs competitors</li>
+              <li>Matter: CVP must translate features → exec-level benefits</li>
+              <li>Do: Attach payoffs to each claim: readiness, risk, TCO, performance</li>
+              <li class="hint">KPI cues: time-to-compliance, HNDL exposure avoided, TCO deltas, latency envelopes</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>3) Narrative Coherence (VPI levers)</h3>
+            <ul>
+              <li>See: Capability clusters without explicit VPI story</li>
+              <li>Matter: VPI reweights value to overcome trade-offs</li>
+              <li>Do: Compensate PQC overhead; enhance resilience via agility; couple with partners for end-to-end kits</li>
+              <li class="hint">KPI cues: failover MTTR ↓, change lead time ↓, hybrid policy coverage ↑</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>4) Segmentation & Use-Case Gap</h3>
+            <ul>
+              <li>See: Less sharp “who/where/why now” articulation</li>
+              <li>Matter: Adoption accelerates with context-specific CVPs</li>
+              <li>Do: Publish 4–6 vertical journeys with steps, controls, KPIs</li>
+              <li class="hint">KPI cues: vertical win-rate ↑, cycle time ↓, attach rate ↑</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>5) Migration & Governance Gap</h3>
+            <ul>
+              <li>See: Programmatic crypto-agility story is thin</li>
+              <li>Matter: Buyers want a de-risked program, not features</li>
+              <li>Do: Gated blueprint: Assess → Pilot → Dual-Stack → Cutover → Optimize</li>
+              <li class="hint">KPI cues: inventory coverage %, policy conformance %, rollback drill pass %</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>6) Proof & Credibility Gap</h3>
+            <ul>
+              <li>See: Parity claims outnumber distinctive proofs</li>
+              <li>Matter: Evidence density decides high-stakes security buys</li>
+              <li>Do: Evidence Annex per claim: standards, tests, pilots, attestations</li>
+              <li class="hint">KPI cues: third-party certifications, red-team findings, benchmark deltas</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>7) Ecosystem & Interop Gap</h3>
+            <ul>
+              <li>See: Interop economics not consistently surfaced as PoDs</li>
+              <li>Matter: Interop lowers switching cost; speeds adoption</li>
+              <li>Do: Package “interop as a benefit” with certified permutations and runbooks</li>
+              <li class="hint">KPI cues: certified combos #, interop lead-time ↓, change failure rate ↓</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>8) Commercial Packaging Gap</h3>
+            <ul>
+              <li>See: Technical strength → not always sellable constructs</li>
+              <li>Matter: Offers must map to budgets and SLAs</li>
+              <li>Do: Tiered offers (Assess/Accelerate/Assure) with SLAs and outcomes</li>
+              <li class="hint">KPI cues: SLA attainment %, outcome credits issued, renewal rate ↑</li>
+            </ul>
+          </div>
+        </div>
+        <div class="cards" style="margin-top:12px">
+          <div class="card">
+            <h3>Repositioning — Strategic Enabler</h3>
+            <ul>
+              <li>From components → to governed program (risk ↓ quarter-over-quarter)</li>
+              <li>From checkbox → to regulatory moat (faster, cheaper compliance)</li>
+              <li>From overhead → to resilience dividend (continuity ↑, MTTR ↓)</li>
+              <li>From one-off → to lifecycle assurance (exec dashboards, posture)</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ChatGPT Heatmap: X=Firm/Market/Mixed, Y=PoP/PoD -->
+      <section style="margin-top:16px" class="panel pad">
+        <div class="toolbar">
+          <div class="left">
+            <span class="badge">ChatGPT — RBT vs PoP/PoD Heatmap</span>
+            <label class="hint">Entity:</label>
+            <select id="hmEntity" class="select"></select>
+          </div>
+          <div class="right">
+            <button id="hmEdit" class="btn">Edit Heatmap</button>
+            <button id="hmApply" class="btn primary" style="display:none">Apply</button>
+            <button id="hmExport" class="btn">Export PNG</button>
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr; gap:12px;">
+          <canvas id="heatmap" style="width:100%; height:280px; background:#ffffff; border:1px solid var(--border); border-radius:8px"></canvas>
+          <div id="hmEditorWrap" class="panel pad" style="display:none">
+            <div class="hint" style="margin-bottom:6px">Edit JSON (counts per cell). Keys: firm/market/mixed × pop/pod.</div>
+            <textarea id="hmEditor" class="input mono" style="min-height:160px"></textarea>
+          </div>
+          <div style="overflow:auto">
+            <table id="hmTable" style="width:max(100%, 560px); border-collapse:collapse">
+              <thead>
+                <tr>
+                  <th style="text-align:left; padding:8px 10px; border-bottom:1px solid var(--border)"> </th>
+                  <th style="text-align:center; padding:8px 10px; border-bottom:1px solid var(--border)">Firm</th>
+                  <th style="text-align:center; padding:8px 10px; border-bottom:1px solid var(--border)">Market</th>
+                  <th style="text-align:center; padding:8px 10px; border-bottom:1px solid var(--border)">Mixed</th>
+                  <th style="text-align:center; padding:8px 10px; border-bottom:1px solid var(--border)">Total</th>
+                </tr>
+              </thead>
+              <tbody id="hmBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script>
+      // Default qualitative model (1–5). Adjust via Edit Data.
+      const MODEL = {
+        entities: ["Nokia", "IBM", "ID Quantique", "Cisco"],
+        axes: [
+          { key: "standards", label: "Standards Compliance" },
+          { key: "defense", label: "Defense-in-Depth" },
+          { key: "agility", label: "Cryptographic Agility" },
+          { key: "ecosystem", label: "Ecosystem & Partnerships" },
+          { key: "user", label: "User-Centric Integration" },
+          { key: "evidence", label: "Financial Evidence" },
+          { key: "hardware", label: "Hardware Trust Anchors" },
+          { key: "maturity", label: "Commercial Maturity" }
+        ],
+        scores: {
+          "Nokia":       { standards: 5, defense: 5, agility: 4, ecosystem: 4, user: 3, evidence: 2, hardware: 3, maturity: 4 },
+          "IBM":         { standards: 5, defense: 4, agility: 5, ecosystem: 4, user: 4, evidence: 4, hardware: 3, maturity: 4 },
+          "ID Quantique":{ standards: 4, defense: 4, agility: 3, ecosystem: 4, user: 5, evidence: 4, hardware: 4, maturity: 5 },
+          "Cisco":       { standards: 5, defense: 4, agility: 4, ecosystem: 5, user: 5, evidence: 4, hardware: 5, maturity: 4 }
+        },
+        pop_pod: {
+          "Nokia":        { pop: 5, pod: 4 },
+          "IBM":          { pop: 4, pod: 5 },
+          "ID Quantique": { pop: 4, pod: 5 },
+          "Cisco":        { pop: 5, pod: 5 }
+        }
+      };
+
+      const COLORS = [
+        "hsl(217 91% 60%)",
+        "hsl(199 89% 48%)",
+        "hsl(262 83% 58%)",
+        "hsl(142 72% 40%)"
+      ];
+
+      const $ = (s)=>document.querySelector(s);
+      let radar, bars;
+      const state = { model: MODEL, visible: new Set(MODEL.entities) };
+      // ChatGPT heatmap data (editable)
+      const HM = {
+        entities: ["Nokia", "IBM", "ID Quantique", "Cisco"],
+        data: {
+          "Nokia": { firm: { pop: 9, pod: 7 }, market: { pop: 6, pod: 5 }, mixed: { pop: 8, pod: 6 } },
+          "IBM": { firm: { pop: 2, pod: 10 }, market: { pop: 2, pod: 10 }, mixed: { pop: 3, pod: 9 } },
+          "ID Quantique": { firm: { pop: 3, pod: 13 }, market: { pop: 2, pod: 13 }, mixed: { pop: 3, pod: 13 } },
+          "Cisco": { firm: { pop: 0, pod: 0 }, market: { pop: 0, pod: 0 }, mixed: { pop: 0, pod: 0 } }
+        }
+      };
+      let hmEntity = HM.entities[0];
+
+      function toRGBA(hsl, alpha=0.25) {
+        // Quick conversion via canvas (browser parses hsl -> rgb)
+        const c = document.createElement('canvas');
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = hsl; // triggers parse
+        const rgb = ctx.fillStyle; // rgb(r, g, b)
+        const m = rgb.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+        if (!m) return hsl;
+        return `rgba(${m[1]}, ${m[2]}, ${m[3]}, ${alpha})`;
+      }
+
+      function renderToggles() {
+        const wrap = $('#entityToggles');
+        wrap.innerHTML = '';
+        state.model.entities.forEach((name, idx) => {
+          const div = document.createElement('label');
+          div.className = 'chk';
+          const id = `ent-${idx}`;
+          div.innerHTML = `<input type="checkbox" id="${id}" ${state.visible.has(name)?'checked':''}/> <span>${name}</span>`;
+          wrap.appendChild(div);
+          div.querySelector('input').addEventListener('change', (e)=>{
+            if (e.target.checked) state.visible.add(name); else state.visible.delete(name);
+            renderRadar(); renderBars();
+          });
+        });
+      }
+
+      // Ensure white background for PNG exports
+      const BgPlugin = { id: 'bg', beforeDraw(chart, args, opts) { const {ctx, width, height} = chart; ctx.save(); ctx.fillStyle = (opts && opts.color) || '#ffffff'; ctx.fillRect(0, 0, width, height); ctx.restore(); } };
+      Chart.register(BgPlugin);
+
+      function renderRadar() {
+        const ctx = document.getElementById('radar');
+        const labels = state.model.axes.map(a=>a.label);
+        const datasets = state.model.entities.filter(n=>state.visible.has(n)).map((name, i) => {
+          const color = COLORS[i % COLORS.length];
+          const fill = toRGBA(color, 0.18);
+          const row = state.model.scores[name];
+          return {
+            label: name,
+            data: state.model.axes.map(a => row[a.key] ?? 0),
+            borderColor: color,
+            backgroundColor: fill,
+            pointBackgroundColor: color,
+            pointBorderColor: '#ffffff',
+            borderWidth: 2
+          };
+        });
+        if (radar) radar.destroy();
+        radar = new Chart(ctx, {
+          type: 'radar',
+          data: { labels, datasets },
+          options: {
+            responsive: true,
+            scales: { r: { beginAtZero: true, max: 5, ticks: { stepSize: 1, color:'#4b5563' }, grid: { color: '#e5e7eb' }, angleLines: { color: '#e5e7eb' }, pointLabels: { color:'#111827' } } },
+            plugins: { legend: { labels: { color:'#374151' } }, bg: { color: '#ffffff' } }
+          }
+        });
+      }
+
+      function renderBars() {
+        const ctx = document.getElementById('bars');
+        const entities = state.model.entities.filter(n=>state.visible.has(n));
+        const labels = entities;
+        const pop = entities.map(n => state.model.pop_pod[n]?.pop ?? 0);
+        const pod = entities.map(n => state.model.pop_pod[n]?.pod ?? 0);
+        if (bars) bars.destroy();
+        bars = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [
+              { label: 'PoP', data: pop, backgroundColor: 'hsl(217 91% 60%)' },
+              { label: 'PoD', data: pod, backgroundColor: 'hsl(262 83% 58%)' }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: { ticks: { color: '#4b5563' }, grid: { color: '#e5e7eb' } },
+              y: { beginAtZero: true, max: 5, ticks: { stepSize: 1, color:'#4b5563' }, grid: { color: '#e5e7eb' } }
+            },
+            plugins: { legend: { labels: { color: '#374151' } }, bg: { color: '#ffffff' } }
+          }
+        });
+      }
+
+      // (Removed Nokia metrics charts; keeping only ChatGPT visuals per request)
+
+      function renderTable() {
+        const head = document.getElementById('scoreHead');
+        const body = document.getElementById('scoreBody');
+        if (!head || !body) return;
+        head.innerHTML = '';
+        body.innerHTML = '';
+        const ths = ['Entity', ...state.model.axes.map(a=>a.label), 'PoP', 'PoD'];
+        ths.forEach((t,i)=>{
+          const th = document.createElement('th'); th.textContent = t; th.style.textAlign = i===0?'left':'center'; th.style.color = '#a9b0bf'; th.style.fontSize='12px'; th.style.letterSpacing='0.6px'; th.style.padding='10px 12px'; th.style.borderBottom = '1px solid var(--border)'; head.appendChild(th);
+        });
+        state.model.entities.forEach(name => {
+          const tr = document.createElement('tr');
+          const tdName = document.createElement('td'); tdName.textContent = name; tdName.style.padding='10px 12px'; tdName.style.borderBottom='1px solid var(--border)'; tr.appendChild(tdName);
+          state.model.axes.forEach(a=>{
+            const td = document.createElement('td'); td.textContent = state.model.scores[name][a.key] ?? ''; td.style.textAlign='center'; td.style.padding='10px 12px'; td.style.borderBottom='1px solid var(--border)'; tr.appendChild(td);
+          });
+          const tdPop = document.createElement('td'); tdPop.textContent = state.model.pop_pod[name]?.pop ?? ''; tdPop.style.textAlign='center'; tdPop.style.padding='10px 12px'; tdPop.style.borderBottom='1px solid var(--border)'; tr.appendChild(tdPop);
+          const tdPod = document.createElement('td'); tdPod.textContent = state.model.pop_pod[name]?.pod ?? ''; tdPod.style.textAlign='center'; tdPod.style.padding='10px 12px'; tdPod.style.borderBottom='1px solid var(--border)'; tr.appendChild(tdPod);
+          body.appendChild(tr);
+        });
+      }
+
+      // ----- ChatGPT Heatmap rendering -----
+      function hmPopulateEntitySelect() {
+        const sel = document.getElementById('hmEntity');
+        if (!sel) return;
+        sel.innerHTML = '';
+        HM.entities.forEach(e => { const opt = document.createElement('option'); opt.value = e; opt.textContent = e; sel.appendChild(opt); });
+        sel.value = hmEntity;
+        sel.onchange = (e)=>{ hmEntity = e.target.value; renderHeatmap(); renderHeatmapTable(); };
+      }
+      function hmColorScale(v, min, max) {
+        if (max <= min) max = min + 1;
+        const t = (v - min) / (max - min);
+        const h = 210 - 60 * t; // 210 -> 150
+        const s = 85 - 15 * t;  // 85 -> 70
+        const l = 90 - 50 * t;  // 90 -> 40
+        return `hsl(${h} ${s}% ${l}%)`;
+      }
+      function renderHeatmap() {
+        const c = document.getElementById('heatmap');
+        if (!c) return;
+        const ctx = c.getContext('2d');
+        const ratio = window.devicePixelRatio || 1;
+        const cssW = c.clientWidth, cssH = c.clientHeight;
+        c.width = Math.max(1, Math.floor(cssW * ratio));
+        c.height = Math.max(1, Math.floor(cssH * ratio));
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        ctx.clearRect(0,0,cssW,cssH);
+        // Layout
+        const left = 90, top = 26, right = 16, bottom = 40;
+        const gridW = cssW - left - right;
+        const gridH = cssH - top - bottom;
+        const cols = 3, rows = 2;
+        const cw = gridW / cols, ch = gridH / rows;
+        const colLabels = ['Firm', 'Market', 'Mixed'];
+        const rowLabels = ['PoP', 'PoD'];
+        // Labels
+        ctx.font = '12px Inter, system-ui, sans-serif';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#374151';
+        for (let i=0;i<cols;i++) {
+          const txt = colLabels[i];
+          ctx.fillText(txt, left + i*cw + cw/2 - ctx.measureText(txt).width/2, top - 12);
+        }
+        for (let j=0;j<rows;j++) {
+          const txt = rowLabels[j];
+          ctx.fillText(txt, left - 8 - ctx.measureText(txt).width, top + j*ch + ch/2);
+        }
+        // Data
+        const d = HM.data[hmEntity] || { firm:{pop:0,pod:0}, market:{pop:0,pod:0}, mixed:{pop:0,pod:0} };
+        const vals = [d.firm.pop, d.market.pop, d.mixed.pop, d.firm.pod, d.market.pod, d.mixed.pod];
+        const min = Math.min(...vals);
+        const max = Math.max(...vals);
+        ctx.strokeStyle = '#e5e7eb';
+        ctx.lineWidth = 1;
+        for (let j=0;j<rows;j++) {
+          for (let i=0;i<cols;i++) {
+            const idx = j*cols + i;
+            const v = vals[idx];
+            const x = left + i*cw;
+            const y = top + j*ch;
+            ctx.fillStyle = hmColorScale(v, min, max);
+            ctx.fillRect(x, y, cw-2, ch-2);
+            ctx.strokeRect(x, y, cw-2, ch-2);
+            ctx.fillStyle = v > (min + (max-min)/2) ? '#ffffff' : '#111827';
+            const text = String(v);
+            ctx.fillText(text, x + cw/2 - ctx.measureText(text).width/2, y + ch/2);
+          }
+        }
+        // Legend
+        const lx = left, ly = top + rows*ch + 10, lw = 140, lh = 10;
+        for (let i=0;i<lw;i++) {
+          const t = i/(lw-1); const v = min + t*(max-min);
+          ctx.fillStyle = hmColorScale(v, min, max);
+          ctx.fillRect(lx + i, ly, 1, lh);
+        }
+        ctx.fillStyle = '#6b7280'; ctx.font = '11px Inter, system-ui, sans-serif';
+        ctx.fillText(min.toString(), lx, ly + lh + 12);
+        const maxTxt = max.toString(); ctx.fillText(maxTxt, lx + lw - ctx.measureText(maxTxt).width, ly + lh + 12);
+      }
+      function renderHeatmapTable() {
+        const body = document.getElementById('hmBody');
+        if (!body) return;
+        body.innerHTML = '';
+        const d = HM.data[hmEntity] || { firm:{pop:0,pod:0}, market:{pop:0,pod:0}, mixed:{pop:0,pod:0} };
+        const rows = [
+          { label: 'PoP', vals: [d.firm.pop, d.market.pop, d.mixed.pop] },
+          { label: 'PoD', vals: [d.firm.pod, d.market.pod, d.mixed.pod] }
+        ];
+        rows.forEach(r => {
+          const tr = document.createElement('tr');
+          const td0 = document.createElement('td'); td0.textContent = r.label; td0.style.padding='8px 10px'; td0.style.borderBottom='1px solid var(--border)'; tr.appendChild(td0);
+          let total = 0;
+          r.vals.forEach(v => { const td = document.createElement('td'); td.textContent = String(v); td.style.textAlign='center'; td.style.padding='8px 10px'; td.style.borderBottom='1px solid var(--border)'; tr.appendChild(td); total += v; });
+          const tdT = document.createElement('td'); tdT.textContent = String(total); tdT.style.textAlign='center'; tdT.style.padding='8px 10px'; tdT.style.borderBottom='1px solid var(--border)'; tr.appendChild(tdT);
+          body.appendChild(tr);
+        });
+      }
+      function hmOpenEditor() {
+        const wrap = document.getElementById('hmEditorWrap');
+        const ed = document.getElementById('hmEditor');
+        if (!wrap || !ed) return;
+        wrap.style.display = '';
+        document.getElementById('hmApply').style.display = '';
+        ed.value = JSON.stringify(HM, null, 2);
+      }
+      function hmApplyEditor() {
+        try {
+          const ed = document.getElementById('hmEditor');
+          const next = JSON.parse(ed.value);
+          if (!next.entities || !next.data) throw new Error('Missing keys (entities, data)');
+          HM.entities = next.entities;
+          HM.data = next.data;
+          hmEntity = HM.entities.includes(hmEntity) ? hmEntity : HM.entities[0];
+          hmPopulateEntitySelect();
+          renderHeatmap();
+          renderHeatmapTable();
+        } catch (e) {
+          alert('Invalid JSON: ' + e.message);
+        }
+      }
+      function hmExportPng() {
+        const c = document.getElementById('heatmap');
+        if (!c) return;
+        const url = c.toDataURL('image/png');
+        const a = document.createElement('a'); a.download = `heatmap-${hmEntity}.png`; a.href = url; document.body.appendChild(a); a.click(); a.remove();
+      }
+
+      function dl(filename, mime, data) { // for text data
+        const a = document.createElement('a');
+        a.download = filename;
+        a.href = URL.createObjectURL(new Blob([data], { type: mime }));
+        document.body.appendChild(a); a.click(); a.remove();
+      }
+      function dlBlob(filename, blob) { // for binary data
+        const a = document.createElement('a');
+        a.download = filename;
+        a.href = URL.createObjectURL(blob);
+        document.body.appendChild(a); a.click(); a.remove();
+      }
+      function dataUrlToBlob(dataUrl, type='image/png') {
+        const b64 = dataUrl.split(',')[1];
+        const bin = atob(b64);
+        const len = bin.length;
+        const u8 = new Uint8Array(len);
+        for (let i=0;i<len;i++) u8[i] = bin.charCodeAt(i);
+        return new Blob([u8], { type });
+      }
+
+      function toCSV() {
+        const header = ['Entity', ...state.model.axes.map(a=>a.label), 'PoP', 'PoD'];
+        const rows = state.model.entities.map(name => {
+          const vals = state.model.axes.map(a=> state.model.scores[name][a.key] ?? '');
+          const pop = state.model.pop_pod[name]?.pop ?? '';
+          const pod = state.model.pop_pod[name]?.pod ?? '';
+          return [name, ...vals, pop, pod];
+        });
+        const lines = [header, ...rows].map(r => r.map(v => (typeof v === 'string' && v.includes(',')) ? '"'+v.replace(/"/g,'""')+'"' : v).join(','));
+        return lines.join('\n');
+      }
+
+      function openEditor() {
+        $('#editorWrap').style.display = '';
+        $('#applyData').style.display = '';
+        $('#editor').value = JSON.stringify(state.model, null, 2);
+      }
+      function applyEditor() {
+        try {
+          const next = JSON.parse($('#editor').value);
+          if (!next.entities || !next.axes || !next.scores || !next.pop_pod) throw new Error('Missing keys');
+          state.model = next;
+          state.visible = new Set(next.entities);
+          renderToggles();
+          renderRadar();
+          renderBars();
+        } catch (e) {
+          alert('Invalid JSON: ' + e.message);
+        }
+      }
+
+      // Bind UI
+      $('#editData').addEventListener('click', openEditor);
+      $('#applyData').addEventListener('click', applyEditor);
+      document.getElementById('downloadCSV')?.addEventListener('click', ()=> dl('cvp-scores.csv', 'text/csv;charset=utf-8', toCSV()));
+      document.getElementById('downloadJSON')?.addEventListener('click', ()=> dl('cvp-model.json', 'application/json;charset=utf-8', JSON.stringify(state.model, null, 2)));
+      $('#exportRadar').addEventListener('click', ()=> { const url = radar.toBase64Image('image/png', 1); dlBlob('cvp-radar.png', dataUrlToBlob(url, 'image/png')); });
+      $('#exportBars').addEventListener('click', ()=> { const url = bars.toBase64Image('image/png', 1); dlBlob('cvp-pop-pod.png', dataUrlToBlob(url, 'image/png')); });
+      document.getElementById('hmEdit')?.addEventListener('click', hmOpenEditor);
+      document.getElementById('hmApply')?.addEventListener('click', hmApplyEditor);
+      document.getElementById('hmExport')?.addEventListener('click', hmExportPng);
+
+      // Initial render
+      renderToggles();
+      renderRadar();
+      renderBars();
+      renderTable();
+      hmPopulateEntitySelect();
+      renderHeatmap();
+      renderHeatmapTable();
+    </script>
+  </body>
+</html>

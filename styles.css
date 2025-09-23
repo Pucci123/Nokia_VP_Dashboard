@@ -1,0 +1,20 @@
+/* Minimal, clean styles without external dependencies */
+/* Minimal styles; most UI uses Tailwind now. */
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+.container { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+h1 { font-size: 24px; margin: 0 0 6px; color: #111827; }
+.subtitle { color: #6b7280; margin: 0 0 12px; }
+.footnote { color: #6b7280; font-size: 12px; }
+/* URL + Paste blocks */
+.inline-form { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.inline-form input[type="url"], .inline-form textarea, .inline-form input[type="text"] {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  padding: 8px 10px;
+  color: var(--text);
+}
+.inline-form input[type="url"] { min-width: 320px; }
+.inline-form textarea { min-width: 420px; min-height: 80px; }
+.inline-form .btn { align-self: start; }
