@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Quantum Security CVP – Comparative Analysis (Nokia vs. Peers)</title>
+  <style>
+    :root {
+      --bg: #f6f8fc;
+      --panel: #ffffff;
+      --ink: #1f2430;
+      --muted: #6b7280;
+      --accent: #2563eb;
+      --accent-2: #16a34a;
+      --accent-3: #d97706;
+      --accent-4: #dc2626;
+      --border: #e5e7eb;
+      --shadow: 0 2px 14px rgba(16,24,40,0.06);
+    }
+    html, body { margin:0; padding:0; background:var(--bg); color:var(--ink); font: 14px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    a { color: var(--accent); text-decoration: none; }
+    .wrap { max-width: 1100px; margin: 32px auto 80px; padding: 0 16px; }
+    header { margin-bottom: 20px; }
+    header h1 { font-size: 22px; margin: 0 0 8px; }
+    header p { color: var(--muted); margin: 0; }
+
+    .grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 16px; }
+    @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
+
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow); }
+    .panel h2 { font-size: 16px; margin: 0; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+    .panel .body { padding: 14px 16px; }
+    .muted { color: var(--muted); }
+    .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    @media (max-width: 720px) { .kpis { grid-template-columns: repeat(2, 1fr);} }
+    .kpi { background: #f7faff; border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+    .kpi .label { color: var(--muted); font-size: 12px; }
+    .kpi .val { font-weight: 700; font-size: 20px; letter-spacing: 0.2px; }
+
+    /* Two-column layout for At-a-Glance KPIs */
+    .twocol { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items:start; }
+    @media (max-width: 860px) { .twocol { grid-template-columns: 1fr; } }
+
+    .legend { display: flex; gap: 16px; flex-wrap: wrap; margin: 8px 0 10px; }
+    .legend .key { display:flex; align-items:center; gap:8px; color: var(--muted); font-size: 12px; }
+    .swatch { width:12px; height:12px; border-radius: 2px; display:inline-block; }
+    .sw-pod { background: var(--accent-2); }
+    .sw-pop { background: var(--accent); }
+    .sw-firm { background: var(--accent-2); }
+    .sw-market { background: var(--accent-3); }
+    .sw-mixed { background: var(--accent-4); }
+
+    .rows { display: grid; gap: 10px; }
+    .row { display: grid; grid-template-columns: 180px 1fr; align-items: center; gap: 12px; }
+    @media (max-width: 560px) { .row { grid-template-columns: 1fr; } }
+    .label { font-weight: 600; }
+    .bars { display: grid; gap: 6px; }
+    .bar { background: #eef2f9; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; position: relative; height: 22px; }
+    .bar .fill { height: 100%; display: block; }
+    .bar .txt { position:absolute; inset:0; display:flex; align-items:center; justify-content:space-between; padding:0 8px; color: #1f2a44; font-size: 12px; }
+    .fill.pod { background: linear-gradient(90deg, rgba(22,163,74,0.9), rgba(22,163,74,0.75)); }
+    .fill.pop { background: linear-gradient(90deg, rgba(37,99,235,0.9), rgba(37,99,235,0.75)); }
+
+    .stack { background: #eef2f9; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; height: 26px; display:flex; }
+    .stack .seg { height:100%; }
+    .seg.firm { background: linear-gradient(90deg, rgba(22,163,74,0.95), rgba(22,163,74,0.80)); }
+    .seg.market { background: linear-gradient(90deg, rgba(217,119,6,0.95), rgba(217,119,6,0.80)); }
+    .seg.mixed { background: linear-gradient(90deg, rgba(220,38,38,0.95), rgba(220,38,38,0.80)); }
+    .stack-legend { display:flex; gap:16px; margin-top:8px; color:var(--muted); font-size:12px; }
+
+    ul.tight { margin: 8px 0 0 16px; padding: 0 0 0 8px; }
+    ul.tight li { margin: 6px 0; }
+
+    .callouts { display: grid; gap: 12px; }
+    .callout { background:#f9fbff; border:1px solid var(--border); border-radius:8px; padding:12px; }
+    .callout h3 { font-size: 14px; margin: 0 0 6px; }
+    .pill { display:inline-block; padding:2px 8px; border-radius:999px; background:#f5f7fb; border:1px solid var(--border); color:#374151; font-size:12px; margin-right:6px; }
+
+    .flow { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .flow .step { background:#f9fbff; border:1px solid var(--border); border-radius:8px; padding:8px 10px; font-weight:600; }
+    .flow .arrow { color:var(--muted); }
+    .foot { color: var(--muted); font-size: 12px; margin-top: 8px; }
+    .small { font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Quantum Security CVP – Comparative Analysis (Nokia vs. Peers)</h1>
+      <p class="muted">Business-readable summary with visuals and recommendations.</p>
+    </header>
+
+    <section class="panel">
+      <h2>At-a-Glance</h2>
+      <div class="body">
+        <div class="twocol" style="margin-top:12px;">
+          <!-- Left: PoD / PoP KPIs -->
+          <div>
+            <div class="label small" style="margin-bottom:6px;">PoD / PoP Snapshot</div>
+            <div class="kpis" style="grid-template-columns: repeat(2, 1fr);">
+              <div class="kpi">
+                <div class="label">Points of Difference (PoD)</div>
+                <div class="val">43</div>
+                <div class="muted small">84% of labeled items</div>
+              </div>
+              <div class="kpi">
+                <div class="label">Points of Parity (PoP)</div>
+                <div class="val">8</div>
+                <div class="muted small">16% of labeled items</div>
+              </div>
+            </div>
+            <div class="callout" style="margin-top:10px;">
+              <h3 class="small" style="margin:0 0 4px;">PoD Themes</h3>
+              <ul class="tight">
+                <li><strong>Primary:</strong> 37/43 (86%) → Telecom/Network integration unique to Nokia.</li>
+                <li><strong>Secondary:</strong> Balance of PQC + network resilience stronger than IDQ/Cisco.</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Right: RBT KPIs -->
+          <div>
+            <div class="label small" style="margin-bottom:6px;">RBT Snapshot</div>
+            <div class="kpis" style="grid-template-columns: repeat(3, 1fr);">
+              <div class="kpi">
+                <div class="label">Firm-Based</div>
+                <div class="val">17</div>
+                <div class="muted small">20.0%</div>
+              </div>
+              <div class="kpi">
+                <div class="label">Market-Based</div>
+                <div class="val">19</div>
+                <div class="muted small">22.4%</div>
+              </div>
+              <div class="kpi">
+                <div class="label">Mixed</div>
+                <div class="val">49</div>
+                <div class="muted small">57.6%</div>
+              </div>
+            </div>
+            <div style="margin-top:10px;">
+              <div class="stack" role="img" aria-label="RBT composition: Firm-based 20.0%, Market-based 22.4%, Mixed 57.6%">
+                <span class="seg firm" style="width:20%" title="Firm-based 20.0%"></span>
+                <span class="seg market" style="width:22.4%" title="Market-based 22.4%"></span>
+                <span class="seg mixed" style="width:57.6%" title="Mixed 57.6%"></span>
+              </div>
+              <div class="stack-legend">
+                <span><span class="swatch sw-firm"></span> Firm-Based 17 (20.0%)</span>
+                <span><span class="swatch sw-market"></span> Market-Based 19 (22.4%)</span>
+                <span><span class="swatch sw-mixed"></span> Mixed 49 (57.6%)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="grid" style="margin-top:16px;">
+      <section class="panel">
+        <h2>Academic Value Proposition Summary</h2>
+        <div class="body">
+          <p>From an academic perspective, an ideal CVP is a strategic tool that articulates clear, substantiated benefits tailored to specific customer segments. It is not merely a list of features but a resonating promise of value co-created with the customer.</p>
+          <ul class="tight">
+            <li><strong>Resonating Focus:</strong> Focus on the one or two points of difference that matter most to the target customer, backed by evidence.</li>
+            <li><strong>Value Co-creation:</strong> Value emerges through interaction, resource integration, and ongoing relationships across the ecosystem.</li>
+            <li><strong>Demonstrable and Quantifiable:</strong> Substantiate claims with data, case studies, value calculators, or guarantees.</li>
+            <li><strong>Segmented and Targeted:</strong> Tailor CVPs to markets (low-end, high-end, new markets), emphasizing utilitarian or hedonic value; avoid mixed ambiguity.</li>
+            <li><strong>Business Model Integration:</strong> A strong business model can outperform superior technology with a weak model; the CVP should anchor the model.</li>
+            <li><strong>Innovation Tactics (VPI):</strong> Compensate for weaknesses, enhance strengths, and couple with complements to disrupt markets.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Quantum Security Value Proposition Summary</h2>
+        <div class="body">
+          <p>In the quantum security domain, CVPs are framed around mitigating the existential threat quantum computers pose to classical cryptography. The value is proactive, risk-based, and often transitional.</p>
+          <ul class="tight">
+            <li><strong>Risk Mitigation:</strong> Protect against “harvest now, decrypt later” and ensure long-term confidentiality.</li>
+            <li><strong>Proactive Transition:</strong> Emphasize urgency of PQC migration before cryptographically relevant quantum computers arrive.</li>
+            <li><strong>Hybrid & Crypto-Agile:</strong> Combine classical and post-quantum crypto for compatibility and risk distribution.</li>
+            <li><strong>Performance and Efficiency:</strong> Prioritize efficiency and low latency, especially for IoT and telecom constraints.</li>
+            <li><strong>Standardization and Compliance:</strong> Align to NIST PQC and regulations (e.g., DORA) to guide adoption.</li>
+            <li><strong>Layered Security:</strong> Advocate defense-in-depth (e.g., PQC, QKD, symmetric crypto) for resilient architectures.</li>
+          </ul>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel" style="margin-top:16px;">
+      <h2>Nokia Value Propositions Summary</h2>
+      <div class="body">
+        <p>Nokia’s quantum-safe CVPs, as analyzed, are heavily centered on its core strength: telecom and network integration.</p>
+        <p><strong>Primary Differentiation (PoD):</strong> Delivering Quantum-Safe Networks (QSN) as an outcome, not just a technology—deeply integrated into network infrastructure and operations for telecom and critical sectors.</p>
+        <h3 class="small" style="margin-top:8px;">Key Themes</h3>
+        <ul class="tight">
+          <li><strong>Outcome-Based:</strong> Frame QSN as strategic outcomes (security, trust, resilience).</li>
+          <li><strong>Defense-in-Depth:</strong> Multi-layered cryptography tailored to network layers.</li>
+          <li><strong>Proven Deployment:</strong> 100+ live deployments demonstrate maturity and practicality.</li>
+          <li><strong>Collaborative Ecosystems:</strong> Partnerships (e.g., Kyndryl, NIST labs) for comprehensive solutions.</li>
+          <li><strong>Migration Guidance:</strong> Managed services and pathways to crypto-agility and readiness.</li>
+        </ul>
+        <p><strong>Points of Parity (PoP):</strong> Collaboration, proactive action, and standards participation—valuable but common across peers (IBM, Cisco).</p>
+      </div>
+    </section>
+
+    <section class="panel" style="margin-top:16px;">
+      <h2>Nokia’s Comparative Evaluation</h2>
+      <div class="body">
+        <div class="callouts">
+          <div class="callout">
+            <h3>Strengths & Alignment</h3>
+            <ul class="tight">
+              <li><strong>Resonating Focus:</strong> Network-integrated quantum safety is a strong focus for telecom operators; avoids generic “all benefits”.</li>
+              <li><strong>Crypto-Agility & Migration:</strong> Emphasis on migration pathways, managed services, and outcomes aligns with industry needs.</li>
+              <li><strong>Clear PoD vs. Competitors:</strong> Deep telecom integration is a sustainable advantage. IBM leads in enterprise/cloud, Cisco in infrastructure breadth, IDQ in QKD hardware—few match Nokia’s seamless network-layer resilience.</li>
+            </ul>
+          </div>
+          <div class="callout">
+            <h3>Weaknesses & Gaps</h3>
+            <ul class="tight">
+              <li><strong>Over-Reliance on a Single PoD:</strong> Telecom integration may limit relevance for application-layer–focused enterprises.</li>
+              <li><strong>Underplayed Co-created Value:</strong> CVP often reads as vendor-delivered, not value-in-use co-created with customers.</li>
+              <li><strong>Underused VPI Tactics:</strong> Make tactics explicit—Compensate (risk-sharing, guarantees), Enhance (new operator business models like QSaaS), Couple (bundle with 5G/IoT/private networks).</li>
+              <li><strong>Limited Quantified Proof:</strong> Move beyond “100+ deployments” to concrete case metrics (cost savings, risk reduction, new revenue).</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" style="margin-top:16px;">
+      <h2>Disruptive Technology Analysis & Recommendations</h2>
+      <div class="body">
+        <p>To reposition quantum‑resilient security as a strategic enabler and make connectivity essential to adoption, Nokia should leverage disruptive innovation theory and Value Proposition Innovation (VPI).</p>
+        <div class="callouts">
+          <div class="callout">
+            <h3>Recommendation 1: Reposition from Cost Center to Growth Enabler</h3>
+            <p><strong>Action:</strong> Shift the narrative from compliance cost to “quantum‑safe connectivity” as a revenue driver and differentiator.</p>
+            <p><strong>Tactic (Enhancing):</strong> Offer “Quantum‑Safe Connectivity” packages for operators to sell to enterprise customers (finance, healthcare, government) as premium, trusted services.</p>
+          </div>
+          <div class="callout">
+            <h3>Recommendation 2: Segment the Market with Tailored CVPs</h3>
+            <p><strong>Action:</strong> Apply academic segmentation; avoid one‑size‑fits‑all.</p>
+            <p><strong>Tactic:</strong> High‑end incumbents (e.g., large banks): hedonic bundle—brand trust, leadership, co‑created frameworks. Low‑end/emerging (e.g., IoT startups): utilitarian bundle—simplified, affordable “QSN‑lite” with fully managed services.</p>
+          </div>
+          <div class="callout">
+            <h3>Recommendation 3: Leverage “Coupling” for Disruptive Bundling</h3>
+            <p><strong>Action:</strong> Make quantum safety inseparable from next‑gen connectivity.</p>
+            <p><strong>Tactic:</strong> Bundle QSN into 5G‑Advanced and 6G portfolios; market “secure by design” connectivity coupled with AI‑driven management for “Self‑Healing, Quantum‑Safe Networks.”</p>
+          </div>
+          <div class="callout">
+            <h3>Recommendation 4: Emphasize Co‑Creation and Quantifiable Outcomes</h3>
+            <p><strong>Action:</strong> Demonstrate value‑in‑use with customers.</p>
+            <p><strong>Tactic:</strong> Launch a “Quantum Resilience Impact Program”: co‑develop posture metrics and business continuity KPIs; publish value documents and case studies proving ROI.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <p class="muted small" style="margin-top:16px;">Note: This analysis reflects the provided summaries; adjust percentages and narratives as new data arrives.</p>
+  </div>
+</body>
+</html>
+
