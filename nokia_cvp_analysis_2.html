@@ -40,6 +40,7 @@
     /* Two-column layout for At-a-Glance KPIs */
     .twocol { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items:start; }
     @media (max-width: 860px) { .twocol { grid-template-columns: 1fr; } }
+    .xsmall { font-size: 11px; }
 
     .legend { display: flex; gap: 16px; flex-wrap: wrap; margin: 8px 0 10px; }
     .legend .key { display:flex; align-items:center; gap:8px; color: var(--muted); font-size: 12px; }
@@ -96,17 +97,18 @@
         <div class="twocol" style="margin-top:12px;">
           <!-- Left: PoD / PoP KPIs -->
           <div>
-            <div class="label small" style="margin-bottom:6px;">PoD / PoP Snapshot</div>
+            <div class="label small" style="margin-bottom:4px;">PoD / PoP Snapshot</div>
+            <div class="xsmall" style="margin-bottom:8px;">PoP - Point of Parity, the VPs are as good as the competition; PoD - Point of Difference, the VPs are different (superior/ inferior) from the competition.</div>
             <div class="kpis" style="grid-template-columns: repeat(2, 1fr);">
               <div class="kpi">
                 <div class="label">Points of Difference (PoD)</div>
-                <div class="val">43</div>
-                <div class="muted small">84% of labeled items</div>
+                <div class="val">84%</div>
+                <div class="muted small">43 points</div>
               </div>
               <div class="kpi">
                 <div class="label">Points of Parity (PoP)</div>
-                <div class="val">8</div>
-                <div class="muted small">16% of labeled items</div>
+                <div class="val">16%</div>
+                <div class="muted small">8 points</div>
               </div>
             </div>
             <div class="callout" style="margin-top:10px;">
@@ -120,22 +122,23 @@
 
           <!-- Right: RBT KPIs -->
           <div>
-            <div class="label small" style="margin-bottom:6px;">RBT Snapshot</div>
+            <div class="label small" style="margin-bottom:4px;">RBT Snapshot</div>
+            <div class="xsmall" style="margin-bottom:8px;">A company's success is grounded in its resources from internal (Firm-based resource), external (Market-based resource) or the combination of both (Mixed).</div>
             <div class="kpis" style="grid-template-columns: repeat(3, 1fr);">
               <div class="kpi">
                 <div class="label">Firm-Based</div>
-                <div class="val">17</div>
-                <div class="muted small">20.0%</div>
+                <div class="val">20.0%</div>
+                <div class="muted small">17 points</div>
               </div>
               <div class="kpi">
                 <div class="label">Market-Based</div>
-                <div class="val">19</div>
-                <div class="muted small">22.4%</div>
+                <div class="val">22.4%</div>
+                <div class="muted small">19 points</div>
               </div>
               <div class="kpi">
                 <div class="label">Mixed</div>
-                <div class="val">49</div>
-                <div class="muted small">57.6%</div>
+                <div class="val">57.6%</div>
+                <div class="muted small">49 points</div>
               </div>
             </div>
             <div style="margin-top:10px;">
@@ -149,6 +152,7 @@
                 <span><span class="swatch sw-market"></span> Market-Based 19 (22.4%)</span>
                 <span><span class="swatch sw-mixed"></span> Mixed 49 (57.6%)</span>
               </div>
+              <p style="margin-top:6px;">This indicates a balanced, adaptive strategy where competitive advantage comes from orchestrating both firm and market resources.</p>
             </div>
           </div>
         </div>
